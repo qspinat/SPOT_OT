@@ -522,12 +522,16 @@ A = assigment_decomp(X, Y)
 
 #%%##################### plot assigment decomp ########################
 
-def plot_assignment_decomp(X,Y,A,title=None,color_list = ):
-    liste
+def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
     plt.figure()
-    plt.scatter(X,np.ones(X.shape[0]), color='blue')
-    plt.scatter(Y,np.zeros(Y.shape[0]), color="red")
-    for i in range(t.shape[0]):
-        plt.plot([X[i],Y[t[i]]],[1,0],color="black")
-        plt.title(title)
-    plt.show
+    for i in range(len(A[0])):
+        plt.scatter(X[A[0][i]],np.ones(len(A[0][i])), color=colors[i%len(colors)])
+        plt.scatter(Y[A[1][i]],np.zeros(len(A[1][i])), color=colors[i%len(colors)])
+        plt.plot([X[A[0][i][0]],X[A[0][i][-1]]],[1,1],color=colors[i%len(colors)])
+        plt.plot([Y[A[1][i][0]],Y[A[1][i][-1]]],[0,0],color=colors[i%len(colors)])
+        plt.plot([X[A[0][i][0]],Y[A[1][i][0]]],[1,0],color=colors[i%len(colors)])
+        plt.plot([X[A[0][i][-1]],Y[A[1][i][-1]]],[1,0],color=colors[i%len(colors)])
+    plt.title(title)
+    plt.show()
+
+plot_assignment_decomp(X,Y,A)
