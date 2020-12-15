@@ -291,7 +291,7 @@ plot_assignment(X,Y,a_bis,'a_bis')
 
 #%%#################### Assigment Decomposition ####################
 
-def assigment_decomp_test(X,Y,t,f,A_Y):
+def assigment_decomp_test(X,Y):
     """
     
     Parameters
@@ -311,6 +311,11 @@ def assigment_decomp_test(X,Y,t,f,A_Y):
     
     m = X.shape[0]
     n = Y.shape[0]
+    
+    f = np.ones(Y.shape[0],dtype='bool')
+    A_Y = -np.ones(Y.shape[0],dtype='int')
+    t = assignment_opt(X, Y)
+
     
     for i in range(n):
         A_Y[i] = -1
@@ -399,7 +404,7 @@ def assigment_decomp_test(X,Y,t,f,A_Y):
     return A
 
 @jit(nopython=True)
-def assigment_decomp_jit(X,Y,t,f,A_Y):
+def assigment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
     """
     
     Parameters
@@ -502,9 +507,11 @@ def assigment_decomp_jit(X,Y,t,f,A_Y):
                     for y in AY[k2]:
                         A_Y[y] = k1
                 AX[k1].append(i)
-                if Al[k1]<n-1 : f[Al[k1]+1]=False
-                if Al[k1]<n-1 : AY[k1].append(Al[k1]+1)
-                if Al[k1]<n-1 : Al[k1]+=1
+                if Al[k1]<n-1 : 
+                    f[Al[k1]+1]=False
+                    A_Y[Al[k1]+1]=k1
+                    AY[k1].append(Al[k1]+1)
+                    Al[k1]+=1
             
     A_to_delete = []
     for i in range(len(As)):
@@ -547,3 +554,9 @@ def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
     plt.show()
 
 plot_assignment_decomp(X,Y,A)
+
+#%%################### optimalinjective assigment with assignment decomposition #####################################
+
+def assigment(X,Y):
+    A = assigment_decomp(X, Y)
+    
