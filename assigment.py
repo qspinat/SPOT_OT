@@ -9,9 +9,16 @@ Created on Thu Dec 10 14:13:21 2020
 
 import numpy as np
 import numba as nb
-from numba import jit
+from numba import jit,prange
 import matplotlib.pyplot as plt
 import time
+
+#%%#################### cost function ####################
+
+def cost(X,Y,a):
+    return np.sum((X-Y[a])**2)
+
+#%%################################
 
 @jit(nopython=True)
 def assignment_opt_jit(X,Y,t):
@@ -148,7 +155,7 @@ def quad_part_opt_ass_jit(X,Y,t,a):
     ----------
     X : sorted X, size m<n
     Y : sorted Y, size n
-    t : array of integer to stock the assignement
+    t : array of integer to stock the assignement(allready done)
     a : array of integer to stock the injective assignement
 
     Returns a optimal injective assigment t
@@ -169,19 +176,18 @@ def quad_part_opt_ass_jit(X,Y,t,a):
     
     # m == n-1
     if m==n-1:
-        res = (X[0]-Y[0])**2-(X[0]-Y[1])**2
-        res_opt = res
-        k_opt=0
-        for k in range(1,m):
-            res += (X[i]-Y[i])**2-(X[i]-Y[i+1])**2
+        res_opt = 0
+        res = 0
+        k_opt=-1
+        for k in range(0,m):
+            res += (X[k]-Y[k])**2-(X[k]-Y[k+1])**2
             if res<res_opt:
                 res_opt=res
                 k_opt=k
-        a[:k_opt] = np.arange(k_opt)
-        a[k_opt:] = np.arange(k_opt+1,n)
+        a[:k_opt+1] = np.arange(k_opt+1)
+        a[k_opt+1:] = np.arange(k_opt+2,n)
         return a
     
-        
 #    a = np.zeros(m,dtype=np.int)
   
     # X before Y
@@ -198,13 +204,13 @@ def quad_part_opt_ass_jit(X,Y,t,a):
     while X[m+ind_max]>=Y[n+ind_max]:
         a[m+ind_max]=n+ind_max
         ind_max-=1
-        if m+ind_max == ind_min:
+        if m+ind_max == ind_min-1:
             return a
         
 #    print("OK",ind_min,ind_max)
     
-    t = t[ind_min:m+ind_max+1]
-    t = assignment_opt_jit(X[ind_min:m+ind_max+1],Y[ind_min:n+ind_max+1],t)
+    t = t[ind_min:m+ind_max+1]-ind_min
+#    t = assignment_opt_jit(X[ind_min:m+ind_max+1],Y[ind_min:n+ind_max+1],t)
     
     # number of non-injective values of t
     p = t.shape[0]-np.unique(t).shape[0]
@@ -236,44 +242,8 @@ def quad_part_opt_ass(X,Y):
     a = np.zeros(X.shape[0],dtype=np.int)
     a = quad_part_opt_ass_jit(X,Y,t,a)
     return a
-  
-#%%################################################################
-      
-rng = np.random.default_rng()
-        
-X = np.sort(rng.choice(int(6*10e1),size=int(1*10e1),replace=False))
-Y = np.sort(rng.choice(int(6*10e1),size=int(2*10e1),replace=False))
 
-#%%######################
-
-start1 = time.time()
-print(0, "starting optimal assigment")
-t = assignment_opt(X, Y)
-end1 =  time.time()
-print(end1-start1, "optimal assigment fisnished")
-print("total time :", end1-start1)
-print()
-#print(t)
-
-start2 = time.time()
-print(time.time()-start1, "starting injective optimal assigment")
-a = quad_part_opt_ass_preprocessed(X,Y)
-end2 =  time.time()
-print(end2-start1, "injective optimal assigment finished")
-print("total time :", end2-start2)
-print()
-#print(a)
-
-start3 = time.time()
-print(time.time()-start1, "starting second injective optimal assigment")
-a_bis = quad_part_opt_ass(X,Y)     
-end3 =  time.time()
-print(end3-start1, "second injective optimal assigment finished")
-print("total time :", end3-start3)
-print()
-#print(a_bis-a)
-
-#%%################# plot ####################
+#%%################# plot assigments ####################
 
 def plot_assignment(X,Y,t,title=None):
     plt.figure()
@@ -284,14 +254,9 @@ def plot_assignment(X,Y,t,title=None):
         plt.title(title)
     plt.show
 
-plot_assignment(X,Y,t,'t')
-plot_assignment(X,Y,a,'a')
-plot_assignment(X,Y,a_bis,'a_bis')
-
-
 #%%#################### Assigment Decomposition ####################
 
-def assigment_decomp_test(X,Y):
+def assignment_decomp_test(X,Y):
     """
     
     Parameters
@@ -404,14 +369,14 @@ def assigment_decomp_test(X,Y):
     return A
 
 @jit(nopython=True)
-def assigment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
+def assignment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
     """
     
     Parameters
     ----------
     X : sorted X, size m<n
     Y : sorted Y, size n
-    t : array of integer to stock the assignementn size m
+    t : array of integer to stock the assignement, size m (allready done)
     f : array of boolean, size m
     A_Y : array of integer, A_Y[i] = Subproblem assignement of Y[i], size n
 
@@ -525,19 +490,12 @@ def assigment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
           
     return AX,AY,As,Al
 
-def assigment_decomp(X, Y):
+def assignment_decomp(X, Y):
     t = assignment_opt(X, Y)
     f = np.ones(Y.shape[0],dtype='bool')
     A_Y = -np.ones(Y.shape[0],dtype='int')
-    return assigment_decomp_jit(X, Y, t, f, A_Y)
+    return assignment_decomp_jit(X, Y, t, f, A_Y)
     
-        
-#%%################## test assigment decomposition #####################
-
-f = np.ones(Y.shape[0],dtype='bool')
-A_Y = -np.ones(Y.shape[0],dtype='int')
-
-A = assigment_decomp(X, Y)
 
 #%%##################### plot assigment decomp ########################
 
@@ -553,10 +511,105 @@ def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
     plt.title(title)
     plt.show()
 
-plot_assignment_decomp(X,Y,A)
-
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
-def assigment(X,Y):
-    A = assigment_decomp(X, Y)
+@jit(nopython=True)#,parallel=True)
+def assignment_jit(X,Y,t,a,A):
+    """   
+    Parameters
+    ----------
+    X : sorted X, size m<n
+    Y : sorted Y, size n
+    t : array of integer to stock the assignement size m (allready done)
+    a : array of integer to stock the injective assignement, size m
+    A : subproblem decomposition given by assignment_decomp
+
+    Returns
+    -------from numba import prange
+    None.
+
+    """ 
+    for i in prange(len(A[0])):
+        print(A[2][i]+1,A[3][i]+1)
+        print(A[1][i][0],A[1][i][-1]+1)
+        a[A[0][i][0]:A[0][i][-1]+1] = quad_part_opt_ass_jit( X[A[0][i][0]:A[0][i][-1]+1] , Y[A[2][i]+1:A[3][i]+1], t[A[0][i][0]:A[0][i][-1]+1]-A[2][i]-1, a[A[0][i][0]:A[0][i][-1]+1]) + A[2][i]+1
+       
+    return a
+
+
+
+def assignment(X,Y):
+    t = np.zeros(X.shape[0],dtype=np.int)
+    t = assignment_opt_jit(X, Y,t)
+    f = np.ones(Y.shape[0],dtype='bool')
+    A_Y = -np.ones(Y.shape[0],dtype='int')
     
+    A = assignment_decomp_jit(X,Y,t,f,A_Y)
+    
+    a = np.zeros(X.shape[0],dtype=np.int)   
+    a = assignment_jit(X,Y,t,a,A)
+
+    return a
+
+#%%################################################################
+      
+rng = np.random.default_rng()
+        
+X = np.sort(rng.choice(int(1000),size=int(3),replace=False))
+Y = np.sort(rng.choice(int(1000),size=int(4),replace=False))
+
+#######################
+
+start1 = time.time()
+print(0, "starting optimal assigment")
+t = assignment_opt(X, Y)
+end1 =  time.time()
+print(end1-start1, "optimal assigment fisnished")
+print("total time :", end1-start1)
+print("cost :",cost(X,Y,t))
+print()
+#print(t)
+
+start2 = time.time()
+print(time.time()-start1, "starting injective optimal assigment")
+a = quad_part_opt_ass_preprocessed(X,Y)
+end2 =  time.time()
+print(end2-start1, "injective optimal assigment finished")
+print("total time :", end2-start2)
+print("cost :",cost(X,Y,a))
+print()
+#print(a)
+
+start3 = time.time()
+print(time.time()-start1, "starting second injective optimal assigment")
+a_bis = quad_part_opt_ass(X,Y)     
+end3 =  time.time()
+print(end3-start1, "second injective optimal assigment finished")
+print("total time :", end3-start3)
+print("cost :",cost(X,Y,a_bis))
+print()
+
+#%%
+
+start4 = time.time()
+print(time.time()-start1, "starting third injective optimal assigment with subproblem decomposition")
+a_ter = assignment(X,Y)
+end4 =  time.time()
+print(end3-start1, "third injective optimal assigment finished")
+print("total time :", end4-start4)
+print("cost :",cost(X,Y,a_ter))
+print(a_ter-a)
+
+#plot_assignment(X,Y,t,'t')
+#plot_assignment(X,Y,a,'a')
+#plot_assignment(X,Y,a_bis,'a_bis')
+#plot_assignment(X,Y,a_ter,'a_ter')
+
+#%%################## test assigment decomposition #####################
+
+A = assignment_decomp(X, Y)
+
+plot_assignment_decomp(X,Y,A)
+
+
+#%%###################### test #######################
