@@ -165,9 +165,21 @@ def quad_part_opt_ass_jit(X,Y,t,a):
     if n==m:
         for i in range(m):
             a[i] = i
-            return a
+        return a
     
     # m == n-1
+    if m==n-1:
+        res = (X[0]-Y[0])**2-(X[0]-Y[1])**2
+        res_opt = res
+        k_opt=0
+        for k in range(1,m):
+            res += (X[i]-Y[i])**2-(X[i]-Y[i+1])**2
+            if res<res_opt:
+                res_opt=res
+                k_opt=k
+        a[:k_opt] = np.arange(k_opt)
+        a[k_opt:] = np.arange(k_opt+1,n)
+        return a
     
         
 #    a = np.zeros(m,dtype=np.int)
