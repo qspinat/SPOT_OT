@@ -373,7 +373,7 @@ def assignment_decomp_test(X,Y):
     return A
 
 @jit(nopython=True)
-def assignment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
+def assignment_decomp_jit(X,Y,t,f,A_Y):
     """
     
     Parameters
@@ -413,7 +413,7 @@ def assignment_decomp_jit(X,Y,t,f,A_Y):   ## A DEBUG ##
             s = t[i]-1
             l = t[i]
             #create A_k
-            AX.append([i])
+            AX.append(np.array([i]))
             AY.append([t[i]])
             As.append(s)
             Al.append(l)
@@ -517,8 +517,8 @@ def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
-@jit(nopython=True)#,parallel=True)
-def assignment_jit(X,Y,t,a,A):
+@jit(nopython=True,parallel=True)
+def assignment_jit(X,Y,t,a,AX,AY,As,Al):
     """   
     Parameters
     ----------
@@ -526,15 +526,17 @@ def assignment_jit(X,Y,t,a,A):
     Y : sorted Y, size n
     t : array of integer to stock the assignement size m (allready done)
     a : array of integer to stock the injective assignement, size m
-    A : subproblem decomposition given by assignment_decomp
+    AX,AY,As,Al : subproblem decomposition given by assignment_decomp
 
     Returns
     -------from numba import prange
     None.
 
     """ 
-    for i in prange(len(A[0])):
-        a[A[0][i][0]:A[0][i][-1]+1] = quad_part_opt_ass_jit( X[A[0][i][0]:A[0][i][-1]+1] , Y[A[2][i]+1:A[3][i]+1], t[A[0][i][0]:A[0][i][-1]+1]-A[2][i]-1, a[A[0][i][0]:A[0][i][-1]+1]) + A[2][i]+1
+    for i in prange(As.shape[0]):
+        AX[i] = np.array(AX[i]).copy()
+        AY[i] = np.array(AY[i]).copy()
+        a[AX[i][0]:AX[i][-1]+1] = quad_part_opt_ass_jit( X[AX[i][0]:AX[i][-1]+1] , Y[As[i]+1:Al[i]+1], t[AX[i][0]:AX[i][-1]+1]-As[i]-1, a[AX[i][0]:AX[i][-1]+1]) + As[i]+1
        
     return a
 
@@ -547,11 +549,15 @@ def assignment(X,Y):
     A_Y = -np.ones(Y.shape[0],dtype='int')
     
     print("subproblem decomposition")
-    A = assignment_decomp_jit(X,Y,t,f,A_Y)
+    AX,AY,As,Al = assignment_decomp_jit(X,Y,t,f,A_Y)
+#    AX = np.array(AX)
+#    AY = np.array(AY)
+    As = np.array(As)
+    Al = np.array(Al)
     
     print("Optimal assignment")
     a = np.zeros(X.shape[0],dtype=np.int)   
-    a = assignment_jit(X,Y,t,a,A)
+    a = assignment_jit(X,Y,t,a,AX,AY,As,Al)
 
     return a
 
@@ -559,10 +565,10 @@ def assignment(X,Y):
       
 rng = np.random.default_rng()
         
-X = np.sort(rng.choice(int(5*10e6),size=int(3*10e5),replace=False))
-Y = np.sort(rng.choice(int(5*10e6),size=int(4.5*10e5),replace=False))
+X = np.sort(rng.choice(int(5*10e2),size=int(3*10e1),replace=False))
+Y = np.sort(rng.choice(int(5*10e2),size=int(4.5*10e1),replace=False))
 
-#######################
+#%%######################
 
 start1 = time.time()
 print(0, "starting optimal assigment")
@@ -594,10 +600,10 @@ print("cost :",cost(X,Y,a_bis))
 print()
 
 start4 = time.time()
-print(time.time()-start1, "starting third injective optimal assigment with subproblem decomposition")
+print(time.time()-start4, "starting third injective optimal assigment with subproblem decomposition")
 a_ter = assignment(X,Y)
 end4 =  time.time()
-print(end3-start1, "third injective optimal assigment finished")
+print(end4-start4, "third injective optimal assigment finished")
 print("total time :", end4-start4)
 print("cost :",cost(X,Y,a_ter))
 
