@@ -35,25 +35,25 @@ def assignment_opt_jit(X,Y,t):
 
     """
     m = X.shape[0]
-    n= Y.shape[0]
+    n = Y.shape[0]
     
-    #t = nb.int32(np.zeros(m))
     i=0
     j=0
     while(i<m):
-        if j==n-1:
+        if X[i]<=Y[j]:
             t[i]=j
             i+=1
-        elif X[i]>Y[j]:
-            j+=1
-        elif j==0:
-            t[i] = j
+        elif j==n-1:
+            t[i]=n-1
             i+=1
-        else:
-            if np.abs(X[i]-Y[j])<np.abs(X[i]-Y[j-1]):
-                t[i]=j
-            else:
-                t[i]=j-1
+        elif Y[j+1]<X[i]:
+            j+=1
+        elif np.abs(X[i]-Y[j])<np.abs(X[i]-Y[j+1]):
+            t[i]=j
+            i+=1
+        else :
+            t[i]=j+1
+            j+=1
             i+=1
     return t
 
@@ -75,6 +75,8 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
     Returns a injective optimal assignement
     -------
     None doesn't simplify the problem
+    s = rightmost current free point
+    a[r] = s + 1
     """
     
     m = X.shape[0]
@@ -107,6 +109,7 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
                     if j == 0:
                         s = a[0]-1
                         r = 0
+                        break
                     elif a[j]>a[j-1]+1:
                         s = a[j]-1
                         r = j
@@ -129,6 +132,7 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
                         if j == 0:
                             s = a[0]-1
                             r = 0
+                            break
                         elif a[j]>a[j-1]+1:
                             s = a[j]-1
                             r = j
@@ -530,8 +534,6 @@ def assignment_jit(X,Y,t,a,A):
 
     """ 
     for i in prange(len(A[0])):
-        print(A[2][i]+1,A[3][i]+1)
-        print(A[1][i][0],A[1][i][-1]+1)
         a[A[0][i][0]:A[0][i][-1]+1] = quad_part_opt_ass_jit( X[A[0][i][0]:A[0][i][-1]+1] , Y[A[2][i]+1:A[3][i]+1], t[A[0][i][0]:A[0][i][-1]+1]-A[2][i]-1, a[A[0][i][0]:A[0][i][-1]+1]) + A[2][i]+1
        
     return a
@@ -544,8 +546,10 @@ def assignment(X,Y):
     f = np.ones(Y.shape[0],dtype='bool')
     A_Y = -np.ones(Y.shape[0],dtype='int')
     
+    print("subproblem decomposition")
     A = assignment_decomp_jit(X,Y,t,f,A_Y)
     
+    print("Optimal assignment")
     a = np.zeros(X.shape[0],dtype=np.int)   
     a = assignment_jit(X,Y,t,a,A)
 
@@ -555,8 +559,8 @@ def assignment(X,Y):
       
 rng = np.random.default_rng()
         
-X = np.sort(rng.choice(int(1000),size=int(3),replace=False))
-Y = np.sort(rng.choice(int(1000),size=int(4),replace=False))
+X = np.sort(rng.choice(int(5*10e6),size=int(3*10e5),replace=False))
+Y = np.sort(rng.choice(int(5*10e6),size=int(4.5*10e5),replace=False))
 
 #######################
 
@@ -589,8 +593,6 @@ print("total time :", end3-start3)
 print("cost :",cost(X,Y,a_bis))
 print()
 
-#%%
-
 start4 = time.time()
 print(time.time()-start1, "starting third injective optimal assigment with subproblem decomposition")
 a_ter = assignment(X,Y)
@@ -598,7 +600,6 @@ end4 =  time.time()
 print(end3-start1, "third injective optimal assigment finished")
 print("total time :", end4-start4)
 print("cost :",cost(X,Y,a_ter))
-print(a_ter-a)
 
 #plot_assignment(X,Y,t,'t')
 #plot_assignment(X,Y,a,'a')
@@ -607,9 +608,9 @@ print(a_ter-a)
 
 #%%################## test assigment decomposition #####################
 
-A = assignment_decomp(X, Y)
+#A = assignment_decomp(X, Y)
 
-plot_assignment_decomp(X,Y,A)
+#plot_assignment_decomp(X,Y,A)
 
 
 #%%###################### test #######################
