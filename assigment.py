@@ -10,6 +10,7 @@ Created on Thu Dec 10 14:13:21 2020
 import numpy as np
 import numba as nb
 from numba import jit,prange
+import numba as nb
 import matplotlib.pyplot as plt
 import time
 
@@ -372,7 +373,7 @@ def assignment_decomp_test(X,Y):
             
     return A
 
-@jit(nopython=True)
+@jit(nopython=True) #nb.int64[:,:](nb.float32[:],nb.float32[:],nb.int64[:],nb.boolean[:],nb.int64[:],nb.int64[:,:],nb.int64[:],nb.int64[:]),
 def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     """
     
@@ -394,7 +395,7 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     Al = currently last value considered
 
     """
-    
+        
     m = X.shape[0]
     n = Y.shape[0]
     
@@ -410,12 +411,15 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     s = t[0]-1
     l = t[0]
     #create A_k
-    AX = np.array([[0,0]])
-    As = np.array([s])
-    Al = np.array([l])
+    AX = 0*AX[0:1]
+    As[0] = s
+    As = As[0:1]
+    Al[0] = l
+    Al = Al[0:1]
             
     A_Y[t[0]] = len(AX)-1
     
+    cnt=0
         
     for i in range(1,m):
         # Nouveau subproblem
@@ -426,6 +430,7 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
             l = t[i]
             #create A_k
             AX = np.concatenate((AX,np.array([[i,i]])))
+#            AX = np.concatenate((AX,i*np.ones((1,2)).astype(np.int64)))
             As = np.append(As,s)
             Al = np.append(Al,l)
             
@@ -439,6 +444,7 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
             if t[i] == t[i-1]:
                 # tant que s_k1 pris, on fusionne les problemes
                 while As[k1]>=0 and not f[As[k1]] : 
+                    cnt+=1
                     k2 = A_Y[As[k1]] 
                     AX[k1][0]=AX[k2][0]
                     As[k1] = As[k2]
@@ -447,16 +453,17 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
                     As[k2]=-2
                     Al[k2]=-2
                 # tant que l_k1 +1 pris, on fusionne les problemes
-                while Al[k1]<n-1 and not f[Al[k1]+1]: # n'arrive jamais ?
-                    k2 = A_Y[Al[k1]+1]
-                    AX[k1][1]=AX[k2][1]
-                    Al[k1] = Al[k2]
-                    for y in range(As[k2]+1,Al[k2]+1):
-                        A_Y[y] = k1
-                    As[k2]=-2
-                    Al[k2]=-2
-                    for y in range(As[k2]+1,Al[k2]+1):
-                        A_Y[y] = k1
+                # while Al[k1]<n-1 and not f[Al[k1]+1]: # n'arrive jamais ?
+                #     print("OK")
+                #     k2 = A_Y[Al[k1]+1]
+                #     AX[k1][1]=AX[k2][1]
+                #     Al[k1] = Al[k2]
+                #     for y in range(As[k2]+1,Al[k2]+1):
+                #         A_Y[y] = k1
+                #     As[k2]=-2
+                #     Al[k2]=-2
+                #     for y in range(As[k2]+1,Al[k2]+1):
+                #         A_Y[y] = k1
                 AX[k1][1] = i # np.max([i,AX[k1][1]]) # just i ?
                 if As[k1] >=0 : 
                     f[As[k1]]=False
@@ -469,14 +476,15 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
             # Deuxieme cas : on extend à droite uniquement
             else :
                 # tant que l_k1 +1 pris, on fusionne les problemes
-                while Al[k1]<n-1 and not f[Al[k1]+1]: # n'arrive jamais ?
-                    k2 = A_Y[Al[k1]+1]
-                    AX[k1][1]=AX[k2][1]
-                    Al[k1] = Al[k2]
-                    for y in range(As[k2]+1,Al[k2]+1):
-                        A_Y[y] = k1
-                    As[k2]=-2
-                    Al[k2]=-2
+                # while Al[k1]<n-1 and not f[Al[k1]+1]: # n'arrive jamais ?
+                #     print("OK")
+                #     k2 = A_Y[Al[k1]+1]
+                #     AX[k1][1]=AX[k2][1]
+                #     Al[k1] = Al[k2]
+                #     for y in range(As[k2]+1,Al[k2]+1):
+                #         A_Y[y] = k1
+                #     As[k2]=-2
+                #     Al[k2]=-2
                 AX[k1][1] = i #np.max([i,AX[k1][1]]) # just i?
                 if Al[k1]<n-1 : 
                     f[Al[k1]+1]=False
@@ -487,6 +495,8 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     AX = AX[A_to_keep]
     As = As[A_to_keep]
     Al = Al[A_to_keep]
+    
+    print(cnt)
           
     return AX,As,Al
 
