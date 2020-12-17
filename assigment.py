@@ -373,8 +373,8 @@ def assignment_decomp_test(X,Y):
             
     return A
 
-@jit(nopython=True) #nb.int64[:,:](nb.float32[:],nb.float32[:],nb.int64[:],nb.boolean[:],nb.int64[:],nb.int64[:,:],nb.int64[:],nb.int64[:]),
-def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
+@jit(nopython=True) #nb.int64[:,:](nb.float32[:],nb.float32[:],nb.int64[:],nb.boolean[:],nb.int64[:],nb.int64[:,:]),
+def assignment_decomp_jit(X,Y,t,f,A_Y,A):
     """
     
     Parameters
@@ -383,6 +383,7 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     Y : sorted Y, size n
     t : array of integer to stock the assignement, size m (allready done)
     f : array of boolean, size m
+    A : array of integer, shape (1,4) 
     A_Y : array of integer, A_Y[i] = Subproblem assignement of Y[i], size n
     AX : array of integer to stock X subproblems, shape (1,2)
     As : array of integer to stock s of subproblems, shape (1)
@@ -410,17 +411,15 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
     # update s
     s = t[0]-1
     l = t[0]
-    #create A_k
-    AX = 0*AX[0:1]
-    As[0] = s
-    As = As[0:1]
-    Al[0] = l
-    Al = Al[0:1]
-            
-    A_Y[t[0]] = len(AX)-1
+    #create A_k    
+    A[0] = np.zeros(4).astype(np.int64)
+    A = A[0:1]
+    A[0,2] = t[0]-1
+    A[0,3] = t[0]
     
-    cnt=0
-        
+            
+    A_Y[t[0]] = A.shape[0]-1
+            
     for i in range(1,m):
         # Nouveau subproblem
         if f[t[i]]:
@@ -429,12 +428,19 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
             s = t[i]-1
             l = t[i]
             #create A_k
-            AX = np.concatenate((AX,np.array([[i,i]])))
-#            AX = np.concatenate((AX,i*np.ones((1,2)).astype(np.int64)))
-            As = np.append(As,s)
-            Al = np.append(Al,l)
+#             AX = np.concatenate((AX,np.array([[i,i]])))
+# #            AX = np.concatenate((AX,i*np.ones((1,2)).astype(np.int64)))
+#             As = np.append(As,s)
+#             Al = np.append(Al,l)            
+#             A_Y[t[i]] = AX.shape[0]-1
             
-            A_Y[t[i]] = AX.shape[0]-1
+            new_A = np.zeros((1,4)).astype(np.int64)
+            new_A[0,0] = i
+            new_A[0,1] = i
+            new_A[0,2] = s
+            new_A[0,3] = l
+            A = np.concatenate((A,new_A),axis=0)
+            A_Y[t[i]] = A.shape[0]-1
 
         
         # Mise a jour probleme
@@ -443,15 +449,14 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
             k1=A_Y[t[i]]
             if t[i] == t[i-1]:
                 # tant que s_k1 pris, on fusionne les problemes
-                while As[k1]>=0 and not f[As[k1]] : 
-                    cnt+=1
-                    k2 = A_Y[As[k1]] 
-                    AX[k1][0]=AX[k2][0]
-                    As[k1] = As[k2]
-                    for y in range(As[k2]+1,Al[k2]+1):
+                while A[k1][2]>=0 and not f[A[k1][2]]:
+                    k2 = A_Y[A[k1][2]] 
+                    A[k1][0]=A[k2][0]
+                    A[k1][2] = A[k2][2]
+                    for y in range(A[k2][2]+1,A[k2][3]+1):
                         A_Y[y] = k1
-                    As[k2]=-2
-                    Al[k2]=-2
+                    A[k2][2]=-2
+                    A[k2][3]=-2
                 # tant que l_k1 +1 pris, on fusionne les problemes
                 # while Al[k1]<n-1 and not f[Al[k1]+1]: # n'arrive jamais ?
                 #     print("OK")
@@ -464,15 +469,15 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
                 #     Al[k2]=-2
                 #     for y in range(As[k2]+1,Al[k2]+1):
                 #         A_Y[y] = k1
-                AX[k1][1] = i # np.max([i,AX[k1][1]]) # just i ?
-                if As[k1] >=0 : 
-                    f[As[k1]]=False
-                    A_Y[As[k1]]=k1
-                    As[k1]-=1
-                if Al[k1]<n-1 : 
-                    f[Al[k1]+1]=False
-                    A_Y[Al[k1]+1]=k1
-                    Al[k1]+=1
+                A[k1][1] = i # np.max([i,AX[k1][1]]) # just i ?
+                if A[k1][2] >=0 : 
+                    f[A[k1][2]]=False
+                    A_Y[A[k1][2]]=k1
+                    A[k1][2]-=1
+                if A[k1][3]<n-1 : 
+                    f[A[k1][3]+1]=False
+                    A_Y[A[k1][3]+1]=k1
+                    A[k1][3]+=1
             # Deuxieme cas : on extend à droite uniquement
             else :
                 # tant que l_k1 +1 pris, on fusionne les problemes
@@ -485,49 +490,43 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al):
                 #         A_Y[y] = k1
                 #     As[k2]=-2
                 #     Al[k2]=-2
-                AX[k1][1] = i #np.max([i,AX[k1][1]]) # just i?
-                if Al[k1]<n-1 : 
-                    f[Al[k1]+1]=False
-                    A_Y[Al[k1]+1]=k1
-                    Al[k1]+=1
-            
-    A_to_keep = np.where(As!=-2)
-    AX = AX[A_to_keep]
-    As = As[A_to_keep]
-    Al = Al[A_to_keep]
-    
-    print(cnt)
-          
-    return AX,As,Al
+                A[k1][1] = i #np.max([i,AX[k1][1]]) # just i?
+                if A[k1][3]<n-1 : 
+                    f[A[k1][3]+1]=False
+                    A_Y[A[k1][3]+1]=k1
+                    A[k1][3]+=1
+
+    A_to_keep = np.where(A[:,2]!=-2)
+    A = A[A_to_keep]
+              
+    return A
 
 def assignment_decomp(X, Y):
     t = assignment_opt(X, Y)
     f = np.ones(Y.shape[0],dtype='bool')
     A_Y = -np.ones(Y.shape[0],dtype='int')
-    AX = np.zeros((1,2),dtype='int')
-    As = np.zeros(1,dtype='int')
-    Al = np.zeros(1,dtype='int')
-    return assignment_decomp_jit(X, Y, t, f, A_Y,AX,As,Al)
+    A = np.zeros((1,4),dtype='int')
+    return assignment_decomp_jit(X, Y, t, f, A_Y,A)
     
 
 #%%##################### plot assigment decomp ########################
 
 def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
     plt.figure()
-    for i in range(len(A[0])):
-        plt.scatter(X[A[0][i][0]:A[0][i][1]+1],np.ones(A[0][i][1]-A[0][i][0]+1), color=colors[i%len(colors)])
-        plt.scatter(Y[A[1][i]+1:A[2][i]+1],np.zeros(A[2][i]-A[1][i]-1+1), color=colors[i%len(colors)])
-        plt.plot([X[A[0][i][0]],X[A[0][i][-1]]],[1,1],color=colors[i%len(colors)])
-        plt.plot([Y[A[1][i]+1],Y[A[2][i]]],[0,0],color=colors[i%len(colors)])
-        plt.plot([X[A[0][i][0]],Y[A[1][i]+1]],[1,0],color=colors[i%len(colors)])
-        plt.plot([X[A[0][i][-1]],Y[A[2][i]]],[1,0],color=colors[i%len(colors)])
+    for i in range(A.shape[0]):
+        plt.scatter(X[A[i][0]:A[i][1]+1],np.ones(A[i][1]-A[i][0]+1), color=colors[i%len(colors)])
+        plt.scatter(Y[A[i][2]+1:A[i][3]+1],np.zeros(A[i][3]-A[i][2]-1+1), color=colors[i%len(colors)])
+        plt.plot([X[A[i][0]],X[A[i][1]]],[1,1],color=colors[i%len(colors)])
+        plt.plot([Y[A[i][2]+1],Y[A[i][3]]],[0,0],color=colors[i%len(colors)])
+        plt.plot([X[A[i][0]],Y[A[i][2]+1]],[1,0],color=colors[i%len(colors)])
+        plt.plot([X[A[i][1]],Y[A[i][3]]],[1,0],color=colors[i%len(colors)])
     plt.title(title)
     plt.show()
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
 @jit(nopython=True,parallel=True)
-def assignment_jit(X,Y,t,a,AX,As,Al):
+def assignment_jit(X,Y,t,a,A):
     """   
     Parameters
     ----------
@@ -535,15 +534,15 @@ def assignment_jit(X,Y,t,a,AX,As,Al):
     Y : sorted Y, size n
     t : array of integer to stock the assignement size m (allready done)
     a : array of integer to stock the injective assignement, size m
-    AX,As,Al : subproblem decomposition given by assignment_decomp
+    A : subproblem decomposition given by assignment_decomp
 
     Returns
     -------
-    None.
+    a : injective assignement
 
     """ 
-    for i in prange(As.shape[0]):
-        a[AX[i][0]:AX[i][-1]+1] = quad_part_opt_ass_jit( X[AX[i][0]:AX[i][-1]+1] , Y[As[i]+1:Al[i]+1], t[AX[i][0]:AX[i][-1]+1]-As[i]-1, a[AX[i][0]:AX[i][-1]+1]) + As[i]+1
+    for i in prange(A.shape[0]):
+        a[A[i][0]:A[i][1]+1] = quad_part_opt_ass_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1, a[A[i][0]:A[i][1]+1]) + A[i][2]+1
        
     return a
 
@@ -554,16 +553,14 @@ def assignment(X,Y):
     t = assignment_opt_jit(X, Y,t)
     f = np.ones(Y.shape[0],dtype='bool')
     A_Y = -np.ones(Y.shape[0],dtype='int')
-    AX = np.zeros((1,2),dtype='int')
-    As = np.zeros(1,dtype='int')
-    Al = np.zeros(1,dtype='int')
+    A = np.zeros((1,4),dtype='int')
     
     print("subproblem decomposition")
-    AX,As,Al = assignment_decomp_jit(X,Y,t,f,A_Y,AX,As,Al)
+    A = assignment_decomp_jit(X,Y,t,f,A_Y,A)
     
     print("Optimal assignment")
     a = np.zeros(X.shape[0],dtype=np.int)   
-    a = assignment_jit(X,Y,t,a,AX,As,Al)
+    a = assignment_jit(X,Y,t,a,A)
 
     return a
 
@@ -627,7 +624,7 @@ end5 =  time.time()
 print(end5-start5, "subproblem decomposition finished")
 print("total time :", end5-start5)
 
-#plot_assignment_decomp(X,Y,A)
+plot_assignment_decomp(X,Y,A)
 
 
 #%%###################### test #######################
