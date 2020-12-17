@@ -8,9 +8,7 @@ Created on Thu Dec 10 14:13:21 2020
 
 
 import numpy as np
-import numba as nb
 from numba import jit,prange
-import numba as nb
 import matplotlib.pyplot as plt
 import time
 
@@ -89,6 +87,8 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
     a[0] = t[0]
     s = a[0]-1
     r = 0
+    S1 = 0.
+    S2 = 0.
     
     for i in range(0,m-1):
         if t[i+1]>a[i]:
@@ -96,17 +96,28 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
             if a[i+1]>a[i]+1:
                 s = a[i+1]-1
                 r = i+1
+                S1 = 0.
+                S2 = 0.
+            else:
+                S1 += (X[i]-Y[a[i]-1])**2
+                S2 += (X[i]-Y[a[i]])**2
         else:
             #subcases
             if s<0:
                 #case 2
                 a[i+1] = a[i]+1
+                S1 += (X[i]-Y[a[i]-1])**2
+                S2 += (X[i]-Y[a[i]])**2
             elif a[i]==n-1:
+                S1 += (X[i]-Y[a[i]-1])**2
                 #case 1
                 a[i+1]=a[i]
                 a[r:i+1]=np.arange(s,a[i+1])
-                # change s and r
+                # change s and r and update S2
+                S2 = S1
                 for j in range(r,-1,-1):
+                    if j !=0:
+                            S2 += (X[j]-Y[a[j]])**2
                     if j == 0:
                         s = a[0]-1
                         r = 0
@@ -115,21 +126,31 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
                         s = a[j]-1
                         r = j
                         break
+                #update S1
+                S1 = np.sum((X[r:i+1]-Y[a[r:i+1]-1])**2)
             
             else:
             # compute sums
 #                print(a[i])
 #                print(Y.shape)
 #                print(Y[a[i]])
-                w1 = np.sum((X[r:i+1]-Y[a[r:i+1]-1])**2) + (X[i+1]-Y[a[i]])**2
-                w2 = np.sum((X[r:i+1]-Y[a[r:i+1]])**2) + (X[i+1]-Y[a[i]+1])**2
+                S1 += (X[i]-Y[a[i]-1])**2
+                S2 += (X[i]-Y[a[i]])**2
+                w1 = S1 + (X[i+1]-Y[a[i]])**2
+                w2 = S2 + (X[i+1]-Y[a[i]+1])**2
+                #w1_ = np.sum((X[r:i+1]-Y[a[r:i+1]-1])**2) + (X[i+1]-Y[a[i]])**2
+                #w2_ = np.sum((X[r:i+1]-Y[a[r:i+1]])**2) + (X[i+1]-Y[a[i]+1])**2
                 
                 #case 1
                 if w1<w2:
                     a[i+1]=a[i]
                     a[r:i+1]=np.arange(s,a[i+1])
-                    # change s and r
+                    
+                    # change s and r and update S2
+                    S2 = S1
                     for j in range(r,-1,-1):
+                        if j !=r:
+                            S2 += (X[j]-Y[a[j]])**2
                         if j == 0:
                             s = a[0]-1
                             r = 0
@@ -138,12 +159,12 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
                             s = a[j]-1
                             r = j
                             break
+                    #update S1
+                    S1 = np.sum((X[r:i+1]-Y[a[r:i+1]-1])**2)
                 #case 2
                 else:
-                    a[i+1]=a[i]+1
-#        print(i,s,r)
-#        print(a)
-#        print()
+                    a[i+1]=a[i]+1                    
+
     return a
 
 def quad_part_opt_ass_preprocessed(X,Y):
@@ -247,17 +268,6 @@ def quad_part_opt_ass(X,Y):
     a = np.zeros(X.shape[0],dtype=np.int)
     a = quad_part_opt_ass_jit(X,Y,t,a)
     return a
-
-#%%################# plot assigments ####################
-
-def plot_assignment(X,Y,t,title=None):
-    plt.figure()
-    plt.scatter(X,np.ones(X.shape[0]), color='blue')
-    plt.scatter(Y,np.zeros(Y.shape[0]), color="red")
-    for i in range(t.shape[0]):
-        plt.plot([X[i],Y[t[i]]],[1,0],color="black")
-        plt.title(title)
-    plt.show
 
 #%%#################### Assigment Decomposition ####################
 
@@ -366,21 +376,6 @@ def assignment_decomp(X, Y):
     A_Y = -np.ones(Y.shape[0],dtype='int')
     A = np.zeros((X.shape[0],4),dtype='int')
     return assignment_decomp_jit(X, Y, t, f, A_Y,A)
-    
-
-#%%##################### plot assigment decomp ########################
-
-def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
-    plt.figure()
-    for i in range(A.shape[0]):
-        plt.scatter(X[A[i][0]:A[i][1]+1],np.ones(A[i][1]-A[i][0]+1), color=colors[i%len(colors)])
-        plt.scatter(Y[A[i][2]+1:A[i][3]+1],np.zeros(A[i][3]-A[i][2]-1+1), color=colors[i%len(colors)])
-        plt.plot([X[A[i][0]],X[A[i][1]]],[1,1],color=colors[i%len(colors)])
-        plt.plot([Y[A[i][2]+1],Y[A[i][3]]],[0,0],color=colors[i%len(colors)])
-        plt.plot([X[A[i][0]],Y[A[i][2]+1]],[1,0],color=colors[i%len(colors)])
-        plt.plot([X[A[i][1]],Y[A[i][3]]],[1,0],color=colors[i%len(colors)])
-    plt.title(title)
-    plt.show()
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
@@ -422,68 +417,3 @@ def assignment(X,Y):
     a = assignment_jit(X,Y,t,a,A)
 
     return a
-
-#%%################################################################
-      
-rng = np.random.default_rng()
-        
-X = np.sort(rng.choice(int(5*10e7),size=int(3*10e4),replace=False))
-Y = np.sort(rng.choice(int(5*10e8),size=int(1*10e7),replace=False))
-
-#%%######################
-
-start1 = time.time()
-print(0, "starting optimal assigment")
-t = assignment_opt(X, Y)
-end1 =  time.time()
-print(end1-start1, "optimal assigment fisnished")
-print("total time :", end1-start1)
-print("cost :",cost(X,Y,t))
-print()
-#print(t)
-
-start2 = time.time()
-print(time.time()-start1, "starting injective optimal assigment")
-a = quad_part_opt_ass_preprocessed(X,Y)
-end2 =  time.time()
-print(end2-start1, "injective optimal assigment finished")
-print("total time :", end2-start2)
-print("cost :",cost(X,Y,a))
-print()
-#print(a)
-
-start3 = time.time()
-print(time.time()-start1, "starting second injective optimal assigment")
-a_bis = quad_part_opt_ass(X,Y)     
-end3 =  time.time()
-print(end3-start1, "second injective optimal assigment finished")
-print("total time :", end3-start3)
-print("cost :",cost(X,Y,a_bis))
-print()
-
-start4 = time.time()
-print(time.time()-start4, "starting third injective optimal assigment with subproblem decomposition")
-a_ter = assignment(X,Y)
-end4 =  time.time()
-print(end4-start4, "third injective optimal assigment finished")
-print("total time :", end4-start4)
-print("cost :",cost(X,Y,a_ter))
-
-#plot_assignment(X,Y,t,'t')
-#plot_assignment(X,Y,a,'a')
-#plot_assignment(X,Y,a_bis,'a_bis')
-#plot_assignment(X,Y,a_ter,'a_ter')
-
-#%%################## test assigment decomposition #####################
-
-start5 = time.time()
-print(time.time()-start5, "starting subproblem decomposition")
-A = assignment_decomp(X, Y)
-end5 =  time.time()
-print(end5-start5, "subproblem decomposition finished")
-print("total time :", end5-start5)
-
-#plot_assignment_decomp(X,Y,A)
-
-
-#%%###################### test #######################
