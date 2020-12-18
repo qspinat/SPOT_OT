@@ -81,18 +81,30 @@ print("total time :", end5-start5)
 
 X = np.array(Image.open('Images/mountains3.png'),dtype=float)[:,:,:3]
 Y = np.array(Image.open('Images/mountains.jpg'),dtype=float)
+Y2 = np.array(Image.open('Images/galaxy.jpg'),dtype=float)
 
 mean_X = X.mean(axis=(0,1))
 mean_Y = Y.mean(axis=(0,1))
 
-n_iter = 1000
-c = 0.1
+n_iter = 300
+c = 7
 
-X_match = FIST_histogram_matching(X,Y,n_iter,c)
+X_match = FIST_histogram_matching(X,Y,n_iter,c).clip(0,255)
+X_match2 = FIST_histogram_matching(X,Y2,n_iter,c).clip(0,255)
+#Y_match = FIST_histogram_matching(Y,Y2,n_iter,c).clip(0,255)
 
 plt.figure()
 plt.imshow(X.astype(np.int))
+
 plt.figure()
 plt.imshow(Y.astype(np.int))
 plt.figure()
 plt.imshow(X_match.astype(np.int))
+
+plt.figure()
+plt.imshow(Y2.astype(np.int))
+plt.figure()
+plt.imshow(X_match2.astype(np.int))
+
+#plt.figure()
+#plt.imshow(Y_match.astype(np.int))

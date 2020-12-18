@@ -401,14 +401,10 @@ def assignment_jit(X,Y,t,A):
     return a
 
 
-
+@jit(nopython=True)
 def assignment(X,Y):
     t = assignment_opt(X, Y)
-    
-    print("subproblem decomposition")
     A = assignment_decomp_jit(X,Y,t)
-    
-    print("Optimal assignment")
     a = assignment_jit(X,Y,t,A)
 
     return a
@@ -427,7 +423,7 @@ def FIST_histogram_matching(X,Y,n_iter,c):
         alpha = c/(1+i)**0.6
         
         # direction
-        theta = 2*np.pi*np.random.uniform(0,1)
+        theta = np.pi*np.random.uniform(0,1)
         phi = np.pi*np.random.uniform(0,1)
         
         #projection
@@ -441,14 +437,17 @@ def FIST_histogram_matching(X,Y,n_iter,c):
         #assigment
         t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
         a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
-        #A = assignment_decomp_jit(X_proj,Y_proj,t,f,A_Y,A)
-        #a = assignment_jit(X_proj, Y_proj, t, a, A)
+        #A = assignment_decomp_jit(X_proj[X_sort_indices],Y_proj[Y_sort_indices],t)
+        #a = assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t, A)
         
         #gradient
         grad = X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]
-        #print("grad :",grad)
-        X_match[:,0] -= grad*alpha*np.sin(phi)*np.cos(theta)
-        X_match[:,1] -= grad*alpha*np.sin(phi)*np.sin(theta)
-        X_match[:,2] -= grad*alpha*np.cos(phi)
+        if ((i%(n_iter//100))==0):
+            print("gradient norm :",np.linalg.norm(grad))
+        #grad=grad*m/grad_norm
+        #problem ici
+        X_match[X_sort_indices,0] -= grad*alpha*np.sin(phi)*np.cos(theta)
+        X_match[X_sort_indices,1] -= grad*alpha*np.sin(phi)*np.sin(theta)
+        X_match[X_sort_indices,2] -= grad*alpha*np.cos(phi)
         
     return X_match.reshape(X.shape)
