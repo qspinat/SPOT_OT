@@ -6,23 +6,25 @@ Created on Thu Dec 17 12:34:45 2020
 @author: qspinat
 """
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 
 from assigment import *
 from plot_assignment import *
+from PIL import Image
 
 #%%################################################################
       
 rng = np.random.default_rng()
         
-X = np.sort(rng.choice(int(5*10e5),size=int(1*10e3),replace=False))
-Y = np.sort(rng.choice(int(5*10e5),size=int(5*10e3),replace=False))
+X = np.sort(np.random.uniform(1000,size=int(430)))
+Y = np.sort(np.random.uniform(800,size=int(2400)))
 
-#%%######################
+#######################
 
 start1 = time.time()
 print(0, "starting optimal assigment")
-t = assignment_opt(X, Y)
+t = assignment_opt_jit(X, Y)
 end1 =  time.time()
 print(end1-start1, "optimal assigment fisnished")
 print("total time :", end1-start1)
@@ -49,6 +51,8 @@ print("total time :", end3-start3)
 print("cost :",cost(X,Y,a_bis))
 print()
 
+#%%
+
 start4 = time.time()
 print(time.time()-start4, "starting third injective optimal assigment with subproblem decomposition")
 a_ter = assignment(X,Y)
@@ -62,7 +66,7 @@ print("cost :",cost(X,Y,a_ter))
 #plot_assignment(X,Y,a_bis,'a_bis')
 #plot_assignment(X,Y,a_ter,'a_ter')
 
-#%%################## test assigment decomposition #####################
+#%%################## test assignment decomposition #####################
 
 start5 = time.time()
 print(time.time()-start5, "starting subproblem decomposition")
@@ -72,3 +76,23 @@ print(end5-start5, "subproblem decomposition finished")
 print("total time :", end5-start5)
 
 #plot_assignment_decomp(X,Y,A)
+
+#%%################# test FIST image matching ########################
+
+X = np.array(Image.open('Images/mountains3.png'),dtype=float)[:,:,:3]
+Y = np.array(Image.open('Images/mountains.jpg'),dtype=float)
+
+mean_X = X.mean(axis=(0,1))
+mean_Y = Y.mean(axis=(0,1))
+
+n_iter = 1000
+c = 0.1
+
+X_match = FIST_histogram_matching(X,Y,n_iter,c)
+
+plt.figure()
+plt.imshow(X.astype(np.int))
+plt.figure()
+plt.imshow(Y.astype(np.int))
+plt.figure()
+plt.imshow(X_match.astype(np.int))

@@ -20,7 +20,7 @@ def cost(X,Y,a):
 #%%################################
 
 @jit(nopython=True)
-def assignment_opt_jit(X,Y,t):
+def assignment_opt(X,Y):
     """
     Parameters
     ----------
@@ -35,6 +35,8 @@ def assignment_opt_jit(X,Y,t):
     """
     m = X.shape[0]
     n = Y.shape[0]
+    
+    t = np.zeros(m).astype(np.int64)
     
     i=0
     j=0
@@ -56,13 +58,8 @@ def assignment_opt_jit(X,Y,t):
             i+=1
     return t
 
-def assignment_opt(X,Y):
-    t = np.zeros(X.shape[0],dtype=np.int)
-    t = assignment_opt_jit(X, Y, t)
-    return t
-
 @jit(nopython=True)
-def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
+def quad_part_opt_ass_preprocessed_jit(X,Y,t):
     """
     Parameters
     ----------
@@ -80,7 +77,7 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
     
     m = X.shape[0]
     n = Y.shape[0]
-#    a = np.zeros(m,dtype=np.int)
+    a = np.zeros(m).astype(np.int64)
 
     
     #initialization
@@ -169,12 +166,11 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t,a):
 
 def quad_part_opt_ass_preprocessed(X,Y):
     t = assignment_opt(X, Y)
-    a = np.zeros(X.shape[0],dtype=np.int)
-    a = quad_part_opt_ass_preprocessed_jit(X,Y,t,a)
+    a = quad_part_opt_ass_preprocessed_jit(X,Y,t)
     return a
 
 @jit(nopython=True)
-def quad_part_opt_ass_jit(X,Y,t,a):
+def quad_part_opt_ass_jit(X,Y,t):
     """
 
     Parameters
@@ -191,6 +187,9 @@ def quad_part_opt_ass_jit(X,Y,t,a):
     """
     m = X.shape[0]
     n = Y.shape[0]
+    
+    a = np.zeros(m).astype(np.int64)
+
     
     #################  symplifying the problem ###############
     
@@ -233,10 +232,9 @@ def quad_part_opt_ass_jit(X,Y,t,a):
         if m+ind_max == ind_min-1:
             return a
         
-#    print("OK",ind_min,ind_max)
+    #print("OK",ind_min,ind_max)
     
     t = t[ind_min:m+ind_max+1]-ind_min
-#    t = assignment_opt_jit(X[ind_min:m+ind_max+1],Y[ind_min:n+ind_max+1],t)
     
     # number of non-injective values of t
     p = t.shape[0]-np.unique(t).shape[0]
@@ -244,8 +242,6 @@ def quad_part_opt_ass_jit(X,Y,t,a):
         a[ind_min:m+ind_max+1]=t+ind_min
         return a
        
-    #ind_min_Y = np.max((0,t[0]-p))+ind_min
-    #ind_max_Y = np.min((n+ind_max-ind_min,t[m+ind_max-ind_min]+p))+ind_min
     # for numba
     if t[0]-p>0:
         ind_min_Y = ind_min+t[0]-p
@@ -256,23 +252,22 @@ def quad_part_opt_ass_jit(X,Y,t,a):
         ind_max_Y = n+ind_max-ind_min+ind_min
     else :
         ind_max_Y = t[m+ind_max-ind_min]+p+ind_min
-#    print("OKOK",ind_min_Y,ind_max_Y-n)
+    #print("OKOK",ind_min_Y,ind_max_Y-n)
     
     # assigment    
-    a[ind_min:m+ind_max+1] = quad_part_opt_ass_preprocessed_jit(X[ind_min:m+ind_max+1], Y[ind_min_Y:ind_max_Y+1], t-ind_min_Y+ind_min,a[ind_min:m+ind_max+1])+ind_min_Y
+    a[ind_min:m+ind_max+1] = quad_part_opt_ass_preprocessed_jit(X[ind_min:m+ind_max+1], Y[ind_min_Y:ind_max_Y+1], t-ind_min_Y+ind_min)+ind_min_Y
     
     return a
 
 def quad_part_opt_ass(X,Y):
     t = assignment_opt(X, Y)
-    a = np.zeros(X.shape[0],dtype=np.int)
-    a = quad_part_opt_ass_jit(X,Y,t,a)
+    a = quad_part_opt_ass_jit(X,Y,t)
     return a
 
 #%%#################### Assigment Decomposition ####################
 
 @jit(nopython=True)
-def assignment_decomp_jit(X,Y,t,f,A_Y,A):
+def assignment_decomp_jit(X,Y,t):
     """
     
     Parameters
@@ -297,6 +292,10 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,A):
         
     m = X.shape[0]
     n = Y.shape[0]
+    
+    f = np.ones(Y.shape[0])==1
+    A_Y = -np.ones(Y.shape[0]).astype(np.int64)
+    A = np.zeros((X.shape[0],4)).astype(np.int64)
     
     cnt=0
     
@@ -372,15 +371,12 @@ def assignment_decomp_jit(X,Y,t,f,A_Y,A):
 
 def assignment_decomp(X, Y):
     t = assignment_opt(X, Y)
-    f = np.ones(Y.shape[0],dtype='bool')
-    A_Y = -np.ones(Y.shape[0],dtype='int')
-    A = np.zeros((X.shape[0],4),dtype='int')
-    return assignment_decomp_jit(X, Y, t, f, A_Y,A)
+    return assignment_decomp_jit(X, Y, t)
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
 @jit(nopython=True,parallel=True)
-def assignment_jit(X,Y,t,a,A):
+def assignment_jit(X,Y,t,A):
     """   
     Parameters
     ----------
@@ -395,25 +391,64 @@ def assignment_jit(X,Y,t,a,A):
     a : injective assignement
 
     """ 
+    
+    a = np.zeros(X.shape[0]).astype(np.int64) 
+
+    
     for i in prange(A.shape[0]):
-        a[A[i][0]:A[i][1]+1] = quad_part_opt_ass_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1, a[A[i][0]:A[i][1]+1]) + A[i][2]+1
+        a[A[i][0]:A[i][1]+1] = quad_part_opt_ass_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
        
     return a
 
 
 
 def assignment(X,Y):
-    t = np.zeros(X.shape[0],dtype=np.int)
-    t = assignment_opt_jit(X, Y,t)
-    f = np.ones(Y.shape[0],dtype='bool')
-    A_Y = -np.ones(Y.shape[0],dtype='int')
-    A = np.zeros((X.shape[0],4),dtype='int')
+    t = assignment_opt(X, Y)
     
     print("subproblem decomposition")
-    A = assignment_decomp_jit(X,Y,t,f,A_Y,A)
+    A = assignment_decomp_jit(X,Y,t)
     
     print("Optimal assignment")
-    a = np.zeros(X.shape[0],dtype=np.int)   
-    a = assignment_jit(X,Y,t,a,A)
+    a = assignment_jit(X,Y,t,A)
 
     return a
+
+#%%################### FIST #######################
+
+@jit(nopython=True)
+def FIST_histogram_matching(X,Y,n_iter,c):
+    X_match = X.copy().reshape(X.shape[0]*X.shape[1],3)
+    Y_match = Y.copy().reshape(Y.shape[0]*Y.shape[1],3)
+    for i in range(n_iter):
+        if ((i%(n_iter//100))==0):
+            print((i*100)//n_iter,'%')
+        
+        # coef SGD
+        alpha = c/(1+i)**0.6
+        
+        # direction
+        theta = 2*np.pi*np.random.uniform(0,1)
+        phi = np.pi*np.random.uniform(0,1)
+        
+        #projection
+        X_proj = X_match[:,0]*np.sin(phi)*np.cos(theta)+X_match[:,1]*np.sin(phi)*np.sin(theta)+X_match[:,2]*np.cos(phi)
+        Y_proj = Y_match[:,0]*np.sin(phi)*np.cos(theta)+Y_match[:,1]*np.sin(phi)*np.sin(theta)+Y_match[:,2]*np.cos(phi)
+        
+        #sort
+        X_sort_indices = np.argsort(X_proj,kind='mergesort')
+        Y_sort_indices = np.argsort(Y_proj,kind='mergesort')
+        
+        #assigment
+        t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
+        a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
+        #A = assignment_decomp_jit(X_proj,Y_proj,t,f,A_Y,A)
+        #a = assignment_jit(X_proj, Y_proj, t, a, A)
+        
+        #gradient
+        grad = X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]
+        #print("grad :",grad)
+        X_match[:,0] -= grad*alpha*np.sin(phi)*np.cos(theta)
+        X_match[:,1] -= grad*alpha*np.sin(phi)*np.sin(theta)
+        X_match[:,2] -= grad*alpha*np.cos(phi)
+        
+    return X_match.reshape(X.shape)
