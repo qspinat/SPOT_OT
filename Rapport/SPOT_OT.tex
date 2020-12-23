@@ -1,0 +1,134 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[french]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage{tikz,pgfplots}
+\usepackage{setspace}
+\usepackage{abstract}
+\usepackage[T1]{fontenc}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{subfig}
+\usepackage{amsmath,amsfonts,amssymb,amsthm,mathtools,mathrsfs}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{unnumberedtotoc}
+\usepackage[justification=centering]{caption}
+\usepackage{hyperref}
+
+
+% Keywords command
+\providecommand{\keywords}[1]
+{
+  %\small    
+  \textbf{\textit{Keywords---}} #1
+}
+
+
+\title{SPOT: Sliced Partial Optimal Transport}
+%\author{effaitunail}
+%\date{May 2018}
+
+\begin{document}
+
+%-----------------------------Title-Page-------------------------------
+
+\begin{titlepage}
+\begin{center}
+
+\includegraphics[scale=0.7]{ENPC.png}
+\includegraphics[scale=0.25]{ENS.png}
+
+\textsc{\Large }\\[1cm]
+
+% Title
+\rule[5pt]{\linewidth}{.7pt}
+
+{\huge \bfseries \textsc{SPOT: Sliced Partial Optimal Transport  \\-\\ fast python implementation, algorithm improvements, and problems\\[0.4cm] }}
+
+\rule[5pt]{\linewidth}{.7pt}
+
+% Author 
+\emph{Auteurs:}\\
+Quentin \textsc{Spinat}
+
+
+\vfill
+
+% Bottom of the page
+{\large \today}
+
+\end{center}
+\end{titlepage}
+
+%-----------------table-des-matières------------------------
+
+\tableofcontents
+\thispagestyle{empty}
+\setcounter{page}{0}
+
+\newpage
+
+%---------------------Abstract-en-une-seule-colonne--------------------
+
+\begin{center}
+\textbf{Abstract}
+\end{center}
+
+This is paper is the project report for the 2020 MVA course \textit{Computational Optimal Transport} taught by Gabriel Peyré. The purpose of it is to study the paper \textit{SPOT: Sliced Partial Optimal Transport} \cite{BC19}.
+
+Optimal Transport is a mathematical field that focus on finding the best way to match two sets with respect to a matching cost. Here we will focus on a subproblem which consists in finding the best assignment of a finite set of points to a second bigger set of points. Although it is a very precise problem, it is often encountered : color transfer from an Image to a bigger one, matching a small point clouds to a bigger one, ...
+
+Nicolas Bonneel et al. proposed a method they called FIST : Fast Iterative Sliced Transport to solve this problem. It consists in solving the assignment problem using only 1D optimal assignment, which is fast and easy to compute. Their algorithm is told to be quasilinear in time with respect to the datasets size.
+
+In this project, I clarify the explanations of the original paper (which is full of typos, especially in the algorithm description), make a fast and user-friendly implementation of this algorithm in Python, and apply it to color transfer and shape matching.
+
+Even though I wasn't able to parallelize my code due to python limitations, the implementation I made revealed to be faster than the original implementation in C++ for color transfer application. However I couldn't be able to reproduce good results for shape matching.
+
+\bigskip
+
+%\vfill % ou \hspace{10pt} ??
+
+\keywords{Optimal Transport, Optimal assignment, SGD, Shape matching, Color transfer}
+
+\begin{center}
+    \rule{4cm}{0.4pt}
+\end{center}
+
+
+%---------------------------Corps-------------------------------
+
+\bigskip
+
+%\addsec
+\section*{Introduction}
+
+Optimal Transport is a mathematical field that focus on finding the best way to match two sets with respect to a matching cost. Here we will focus on a subproblem which consists in finding the best assignment of a finite set of points to a second bigger set of points. Although it is a very precise problem, it is often encountered : color transfer from an Image to a bigger one, matching a small point clouds to a bigger one,
+
+Nicolas Bonneel et al. proposed a method they called FIST : Fast Iterative Sliced Transport to solve this problem. Instead of minimizing the global Wassertein distance between the two point sets, they consider the problem of minimizing the mean over all the 1 dimensional projections of the Wassertein distance between the two 1D projected point sets. It hence makes it possible to solve the original problem by doing a Stochastic Gradient Descent and solving only the 1D projected subproblems.
+
+To do so efficiently they propose an algorithm for 1D optimal assignment quasilinear in time with respect to the datasets sizes.
+
+WHY IS IT BETTER THAN PREVIOUS METHODS ?
+DESCRIPTION OF SGD
+DESCRIPTOIN OF COLOR TRANSFER
+DESCRIPTION OF SHAPE MATCHING
+
+
+\newpage
+
+\section{Outils et méthodes mathématiques}
+        
+
+\bigskip
+
+%\addsec{Conclusion}
+\section*{Conclusion}
+
+
+\section*{Remerciements}
+
+
+\bibliographystyle{unsrt}
+\bibliography{bibli}
+
+\end{document}
