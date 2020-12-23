@@ -47,6 +47,7 @@ def brut_force(X,Y):
                     best_a = a.copy()
     return best_a
 
+
 @jit(nopython=True)
 def assignment_opt(X,Y):
     """
@@ -295,7 +296,7 @@ def quad_part_opt_ass(X,Y):
 #%%#################### Assigment Decomposition ####################
 
 @jit(nopython=True)
-def assignment_decomp_jit(X,Y,t):
+def assignment_decomp_jit(X,Y,t,log=False):
     """
     
     Parameters
@@ -322,13 +323,15 @@ def assignment_decomp_jit(X,Y,t):
     n = Y.shape[0]
     
     f = np.ones(Y.shape[0])==1
-    A_Y = -np.ones(Y.shape[0]).astype(np.int64)
-    A = np.zeros((X.shape[0],4)).astype(np.int64)
+    if X.shape[0]>1000:
+        A = np.zeros((X.shape[0]//100,4)).astype(np.int64)
+    elif X.shape[0]>100:
+        A = np.zeros((X.shape[0]//10,4)).astype(np.int64)
+    else:
+        A = np.zeros((10,4)).astype(np.int64)
     
     cnt=0
-    
-    A[:,2:]=-2
-    
+        
     #Initialization
     f[t[0]] = False
     # update s
@@ -336,52 +339,56 @@ def assignment_decomp_jit(X,Y,t):
     l = t[0]
     #create A_k    
     A[0,:] = 0
-    #A = A[0:1]
     A[0,2] = t[0]-1
     A[0,3] = t[0]
             
-    A_Y[t[0]] = cnt
     cnt+=1
             
     for i in range(1,m):
+        if log and (i%(m//10))==0:
+            print(i//(m//100))
         # Nouveau subproblem
         if f[t[i]]:
             f[t[i]] = False
             # update s
             s = t[i]-1
             l = t[i]
+            # increase of A if necessary
+            if cnt>A.shape[0]:
+                lost_vect = A[cnt-1].copy()
+                new_dim = min(A.shape[0],X.shape[0]-A.shape[0])
+                A = np.concatenate((A,np.zeros((new_dim,4)).astype(np.int64))).copy()
+                A[cnt-1]=lost_vect.copy()
             #create A_k            
             A[cnt,0] = i
             A[cnt,1] = i
             A[cnt,2] = s
             A[cnt,3] = l
             
-            A_Y[t[i]] = cnt
             cnt+=1
         
         # Mise a jour probleme
         else:
             # Premier cas : on extend à droite et à gauche
-            k1=A_Y[t[i]]
+            k1 = cnt-1 #A_Y[t[i]] ==cnt-1 !!
             if t[i] == t[i-1]:
                 # tant que s_k1 pris, on fusionne les problemes
                 while A[k1][2]>=0 and not f[A[k1][2]]:
-                    k2 = A_Y[A[k1][2]] 
-                    A[k1][0]=A[k2][0]
-                    A[k1][2] = A[k2][2]
-                    for y in range(A[k2][2]+1,A[k2][3]+1):
-                        A_Y[y] = k1
-                    A[k2][2]=-2
-                    A[k2][3]=-2
+                    k2 = k1-1
+                    A[k2][1] = A[k1][1]
+                    A[k2][3] = A[k1][3]
+                    A[k1][2]=-2
+                    A[k1][3]=-2   
+                    k1=k2
+                    cnt-=1
+                    ##
                 # tant que l_k1 +1 pris, on fusionne les problemes --> n'arrive jamais
                 A[k1][1] = i # np.max([i,AX[k1][1]]) # just i ?
                 if A[k1][2] >=0 : 
                     f[A[k1][2]]=False
-                    A_Y[A[k1][2]]=k1
                     A[k1][2]-=1
                 if A[k1][3]<n-1 : 
                     f[A[k1][3]+1]=False
-                    A_Y[A[k1][3]+1]=k1
                     A[k1][3]+=1
             # Deuxieme cas : on extend à droite uniquement
             else :
@@ -389,17 +396,17 @@ def assignment_decomp_jit(X,Y,t):
                 A[k1][1] = i #np.max([i,AX[k1][1]]) # just i?
                 if A[k1][3]<n-1 : 
                     f[A[k1][3]+1]=False
-                    A_Y[A[k1][3]+1]=k1
                     A[k1][3]+=1
-
+                    
+    A = A[:cnt]
     A_to_keep = np.where(A[:,2]!=-2)
     A = A[A_to_keep]
               
     return A
 
-def assignment_decomp(X, Y):
+def assignment_decomp(X, Y,log=False):
     t = assignment_opt(X, Y)
-    return assignment_decomp_jit(X, Y, t)
+    return assignment_decomp_jit(X, Y, t,log=log)
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
 
@@ -421,7 +428,6 @@ def assignment_jit(X,Y,t,A):
     """ 
     
     a = np.zeros(X.shape[0]).astype(np.int64) 
-
     
     for i in prange(A.shape[0]):
         a[A[i][0]:A[i][1]+1] = quad_part_opt_ass_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1

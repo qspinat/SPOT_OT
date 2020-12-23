@@ -17,24 +17,24 @@ from PIL import Image
       
 rng = np.random.default_rng()
 
-m = 6
-n = 10        
+m = 400000
+n = 5000000
 
-X = np.sort(np.random.uniform(1000,size=int(m)))
-Y = np.sort(np.random.uniform(1000,size=int(n)))
+X = np.sort(np.random.uniform(10000,size=int(m)))
+Y = np.sort(np.random.uniform(10000,size=int(n)))
 
 #%%################## true optimal assignement ##############
 
-start0 = time.time()
-print(0, "starting optimal assigment brut force")
-a_bf = brut_force(X, Y)
-end0 =  time.time()
-print(end0-start0, "optimal assigment fisnished")
-print("total time :", end0-start0)
-print("cost :",cost(X,Y,a_bf))
-print()
+# start0 = time.time()
+# print(0, "starting optimal assigment brut force")
+# a_bf = brut_force(X, Y)
+# end0 =  time.time()
+# print(end0-start0, "optimal assigment fisnished")
+# print("total time :", end0-start0)
+# print("cost :",cost(X,Y,a_bf))
+# print()
 
-#%%###################### 
+####################### 
 
 start1 = time.time()
 print(0, "starting optimal assigment")
@@ -66,7 +66,7 @@ print("total time :", end3-start3)
 print("cost :",cost(X,Y,a_bis))
 print()
 
-#%%
+#
 
 start4 = time.time()
 print(time.time()-start4, "starting third injective optimal assigment with subproblem decomposition")
@@ -75,13 +75,14 @@ end4 =  time.time()
 print(end4-start4, "third injective optimal assigment finished")
 print("total time :", end4-start4)
 print("cost :",cost(X,Y,a_ter))
+print()
 
 #plot_assignment(X,Y,t,'t')
 #plot_assignment(X,Y,a,'a')
 #plot_assignment(X,Y,a_bis,'a_bis')
 #plot_assignment(X,Y,a_ter,'a_ter')
 
-#%%################## test assignment decomposition #####################
+################### test assignment decomposition #####################
 
 start5 = time.time()
 print(time.time()-start5, "starting subproblem decomposition")
