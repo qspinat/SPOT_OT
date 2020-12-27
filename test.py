@@ -17,11 +17,12 @@ from PIL import Image
       
 rng = np.random.default_rng()
 
-m = 400000
-n = 5000000
+n = 30
+alpha = 0.75
+m = int(alpha*n)
 
-X = np.sort(np.random.uniform(10000,size=int(m)))
-Y = np.sort(np.random.uniform(10000,size=int(n)))
+X = np.sort(np.random.uniform(10,size=int(m)))
+Y = np.sort(np.random.uniform(10,size=int(n)))
 
 #%%################## true optimal assignement ##############
 
@@ -46,6 +47,9 @@ print("cost :",cost(X,Y,t))
 print()
 #print(t)
 
+plot_assignment(X,Y,t,'t')
+
+#%%
 
 start2 = time.time()
 print(time.time()-start1, "starting injective optimal assigment")
@@ -77,6 +81,17 @@ print("total time :", end4-start4)
 print("cost :",cost(X,Y,a_ter))
 print()
 
+#
+
+# start5 = time.time()
+# print(time.time()-start5, "starting fourth injective optimal assigment with subproblem decomposition")
+# a_quad = assignment_bis(X,Y)
+# end5 =  time.time()
+# print(end5-start5, "fourth injective optimal assigment finished")
+# print("total time :", end5-start5)
+# print("cost :",cost(X,Y,a_quad))
+# print()
+
 #plot_assignment(X,Y,t,'t')
 #plot_assignment(X,Y,a,'a')
 #plot_assignment(X,Y,a_bis,'a_bis')
@@ -84,12 +99,12 @@ print()
 
 ################### test assignment decomposition #####################
 
-start5 = time.time()
-print(time.time()-start5, "starting subproblem decomposition")
+start6 = time.time()
+print(time.time()-start6, "starting subproblem decomposition")
 A = assignment_decomp(X, Y)
-end5 =  time.time()
-print(end5-start5, "subproblem decomposition finished")
-print("total time :", end5-start5)
+end6 =  time.time()
+print(end6-start6, "subproblem decomposition finished")
+print("total time :", end6-start6)
 
 #plot_assignment_decomp(X,Y,A)
 

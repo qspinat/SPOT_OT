@@ -6,11 +6,12 @@ Created on Thu Dec 10 14:13:21 2020
 @author: qspinat
 """
 
-
 import numpy as np
 from numba import jit,prange
 import matplotlib.pyplot as plt
 import time
+from multiprocessing import Pool
+import functools
 
 #%%#################### cost function ####################
 
@@ -434,12 +435,49 @@ def assignment_jit(X,Y,t,A):
        
     return a
 
+def f_pool(i,X,Y,t,A):
+    return quad_part_opt_ass_jit(X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
+
+
+def assignment_pool(X,Y,t,A):
+    """   
+    Parameters
+    ----------
+    X : sorted X, size m<n
+    Y : sorted Y, size n
+    t : array of integer to stock the assignement size m (allready done)
+    a : array of integer to stock the injective assignement, size m
+    A : subproblem decomposition given by assignment_decomp
+
+    Returns
+    -------
+    a : injective assignement
+
+    """ 
+    
+    # definir  fonction
+    
+    liste = np.arange(A.shape[0],dtype=np.int64)
+    
+    copier = functools.partial(f_pool, X=X, Y=Y,t=t,A=A)
+       
+    with Pool(6) as p:
+        a = p.map(copier, liste) 
+    
+    return np.concatenate(a,axis=0)
 
 @jit(nopython=True)
 def assignment(X,Y):
     t = assignment_opt(X, Y)
     A = assignment_decomp_jit(X,Y,t)
     a = assignment_jit(X,Y,t,A)
+
+    return a
+
+def assignment_bis(X,Y):
+    t = assignment_opt(X, Y)
+    A = assignment_decomp_jit(X,Y,t)
+    a = assignment_pool(X,Y,t,A)
 
     return a
 
