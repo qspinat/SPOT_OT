@@ -14,8 +14,9 @@ def plot_assignment(X,Y,t,title=None):
     plt.scatter(Y,np.zeros(Y.shape[0]), color="red")
     for i in range(t.shape[0]):
         plt.plot([X[i],Y[t[i]]],[1,0],color="black")
-        plt.title(title)
-    plt.show
+    plt.title(title)
+    plt.axis("off")
+    plt.show()
     
 def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
     plt.figure()
@@ -27,4 +28,5 @@ def plot_assignment_decomp(X,Y,A,title=None,colors=['b','g','r','c','m','y']):
         plt.plot([X[A[i][0]],Y[A[i][2]+1]],[1,0],color=colors[i%len(colors)])
         plt.plot([X[A[i][1]],Y[A[i][3]]],[1,0],color=colors[i%len(colors)])
     plt.title(title)
+    plt.axis("off")
     plt.show()

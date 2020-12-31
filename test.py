@@ -47,7 +47,7 @@ print("cost :",cost(X,Y,t))
 print()
 #print(t)
 
-plot_assignment(X,Y,t,'t')
+plot_assignment(X,Y,t)#,'t')
 
 #%%
 
@@ -60,6 +60,11 @@ print("total time :", end2-start2)
 print("cost :",cost(X,Y,a))
 print()
 #print(a)
+
+plot_assignment(X,Y,a)#,'a')
+
+
+#%%
 
 start3 = time.time()
 print(time.time()-start1, "starting second injective optimal assigment")
@@ -97,7 +102,7 @@ print()
 #plot_assignment(X,Y,a_bis,'a_bis')
 #plot_assignment(X,Y,a_ter,'a_ter')
 
-################### test assignment decomposition #####################
+#%%################## test assignment decomposition #####################
 
 start6 = time.time()
 print(time.time()-start6, "starting subproblem decomposition")
@@ -106,40 +111,7 @@ end6 =  time.time()
 print(end6-start6, "subproblem decomposition finished")
 print("total time :", end6-start6)
 
-#plot_assignment_decomp(X,Y,A)
-
-#%%################# test FIST image matching ########################
-
-X = np.array(Image.open('Images/mountains3.png'),dtype=float)[:,:,:3]
-X2 = np.array(Image.open('Images/starry_night.png'),dtype=float)[:,:,:3]
-Y = np.array(Image.open('Images/mountains.jpg'),dtype=float)
-Y2 = np.array(Image.open('Images/galaxy.jpg'),dtype=float)
-
-mean_X = X.mean(axis=(0,1))
-mean_Y = Y.mean(axis=(0,1))
-
-n_iter = 400
-c = 5
-
-X_match = FIST_image(X,Y,n_iter).clip(0,255)
-X_match2 = FIST_image(X,Y2,n_iter).clip(0,255)
-#Y_match = FIST_histogram_matching(Y,Y2,n_iter,c).clip(0,255)
-
-plt.figure()
-plt.imshow(X2.astype(np.int))
-
-plt.figure()
-plt.imshow(Y.astype(np.int))
-plt.figure()
-plt.imshow(X_match.astype(np.int))
-
-plt.figure()
-plt.imshow(Y2.astype(np.int))
-plt.figure()
-plt.imshow(X_match2.astype(np.int))
-
-#plt.figure()
-#plt.imshow(Y_match.astype(np.int))
+plot_assignment_decomp(X,Y,A)
 
 #%%################ test fist 2D shape matching #################
 

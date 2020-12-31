@@ -518,7 +518,6 @@ def FIST_image(X,Y,n_iter,c=None):
         grad = X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]
         if ((i%(n_iter//100))==0):
             print("gradient norm :",np.linalg.norm(grad))
-            print("objective norm :", np.linalg.norm(X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]))
         #grad=grad*m/grad_norm
         #problem ici
         X_match[X_sort_indices,0] -= grad*alpha*np.sin(phi)*np.cos(theta)
@@ -531,18 +530,14 @@ def FIST_image(X,Y,n_iter,c=None):
 #%%############################### shape matching ##############################
 
 #@jit(nopython=True)
-def FIST_2D_similarity(X,Y,n_iter,alpha=0.1,c=None, plot=None):
-    A = np.eye(2)
-    h = np.zeros((2))
+def FIST_2D_similarity(X,Y,n_iter, plot=None):
+
+    X_match = X.copy()
     R = np.zeros((2,2))
 
     for i in range(n_iter):
-        if ((i%(n_iter//100))==0):
+        if ((i%(n_iter//10))==0):
             print((i*100)//n_iter,'%')
-        
-        # coef SGD
-        if c != None:
-            alpha = c/(1+i)**0.6
         
         # direction
         theta = 2*np.pi*np.random.uniform(0,1)
@@ -553,8 +548,7 @@ def FIST_2D_similarity(X,Y,n_iter,alpha=0.1,c=None, plot=None):
        
         
         #projection
-        X_transform = X.dot(A)+h
-        X_proj = X_transform[:,0]*np.cos(theta)+X_transform[:,1]*np.sin(theta)
+        X_proj = X_match[:,0]*np.cos(theta)+X_match[:,1]*np.sin(theta)
         Y_proj = Y[:,0]*np.cos(theta)+Y[:,1]*np.sin(theta)
         
         #sort
@@ -564,95 +558,34 @@ def FIST_2D_similarity(X,Y,n_iter,alpha=0.1,c=None, plot=None):
         #assigment
         t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
         a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
+        
+        cx = np.mean(X_match,axis=0)
+        cy = np.mean(Y[Y_sort_indices][a],axis=0)
         #A = assignment_decomp_jit(X_proj[X_sort_indices],Y_proj[Y_sort_indices],t)
         #a = assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t, A)
         
-        #gradient
-        grad_X = X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]
-        grad_h = np.mean(grad_X)*R[:,0]
-        #numba
-        #grad_A = np.zeros((2,2))
-        #for k in range(X.shape[0]):
-        #    grad_A += np.diag(X[X_sort_indices][k]).dot(np.eye(2)).dot(np.diag(grad_X[k]*R[:,0]))
-        #grad_A/=X.shape[0]
-        #non numba
-        grad_A = np.mean(np.einsum('ik,il->ikl',X[X_sort_indices],grad_X[:,np.newaxis]*R[np.newaxis,:,0]),axis=0)
-        if ((i%(n_iter//100))==0):
-            print("gradient norm :",np.linalg.norm(grad_A),np.linalg.norm(grad_h))
+        # update step     
+        #rotation A
+        M = (X_match-cx).T.dot(Y[Y_sort_indices][a]-cy)
+        u,s,vh = np.linalg.svd(M)
+        O = u.dot(vh)
+        d = np.sign(np.linalg.det(O))
+        S = np.eye(vh.shape[0])
+        S[-1,-1] = d
+        A = u.dot(S).dot(vh)
+        
+        #scale
+        stdx = np.std(np.linalg.norm(X_match-cx,axis=1))
+        stdy = np.std(np.linalg.norm(Y[Y_sort_indices][a]-cy,axis=1))
+        scale = stdy/stdx
+        
+        #update
+        X_match = scale*A.dot((X_match-cx).T).T+cy
+
+        
+        if ((i%(n_iter//10))==0):
             print("objective norm :", np.linalg.norm(X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]))
         if plot !=None and ((i%(n_iter//plot))==0):
-            plt.scatter((X.dot(A)+h)[:,0],(X.dot(A)+h)[:,1],label = i//(n_iter//plot))
-        #grad=grad*m/grad_norm
-        #problem ici
-        h -= grad_h*alpha
-        A -= grad_A*alpha
+            plt.scatter(X_match[:,0],X_match[:,1], label = i ,alpha=0.2/plot*(i/(n_iter/plot)+1),color="green")
         
-    return X.dot(A)+h
-
-def FIST_2D_solid(X,Y,n_iter,alpha=0.1,c=None, plot=None):
-    A = np.eye(2)
-    h = np.zeros((2))
-    phi = 0
-    lamb = 1.
-    R = np.zeros((2,2))
-
-    for i in range(n_iter):
-        if ((i%(n_iter//100))==0):
-            print((i*100)//n_iter,'%')
-        
-        # coef SGD
-        if c != None:
-            alpha = c/(1+i)**0.6
-        
-        # direction
-        theta = 2*np.pi*np.random.uniform(0,1)
-        R[0,0] = np.cos(theta)
-        R[0,1] = -np.sin(theta)
-        R[1,0] = np.sin(theta)
-        R[1,1] = np.cos(theta)
-       
-        
-        #projection
-        A[0,0] = np.cos(phi)
-        A[0,1] = -np.sin(phi)
-        A[1,0] = np.sin(phi)
-        A[1,1] = np.cos(phi)
-        A *= lamb
-        X_transform = X.dot(A)+h
-        X_proj = X_transform[:,0]*np.cos(theta)+X_transform[:,1]*np.sin(theta)
-        Y_proj = Y[:,0]*np.cos(theta)+Y[:,1]*np.sin(theta)
-        
-        #sort
-        X_sort_indices = np.argsort(X_proj,kind='mergesort')
-        Y_sort_indices = np.argsort(Y_proj,kind='mergesort')
-        
-        #assigment
-        t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
-        a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
-        #A = assignment_decomp_jit(X_proj[X_sort_indices],Y_proj[Y_sort_indices],t)
-        #a = assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t, A)
-        
-        #gradient
-        grad_X = X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]
-        grad_h = np.mean(grad_X)*R[:,0]
-        grad_lamb = np.mean(np.einsum('ij,jk,ik->i',X[X_sort_indices],A/lamb,grad_X[:,np.newaxis]*R[np.newaxis,:,0]))
-        grad_phi = lamb*np.mean(np.einsum('ij,jk,ik->i',X[X_sort_indices],np.array([[-np.sin(phi),-np.cos(phi)],[np.cos(phi),-np.sin(phi)]]),grad_X[:,np.newaxis]*R[np.newaxis,:,0]))
-        
-        
-        if ((i%(n_iter//100))==0):
-            print("objective norm :", np.linalg.norm(X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]))
-        if plot !=None and ((i%(n_iter//plot))==0):
-            plt.scatter((X.dot(A)+h)[:,0],(X.dot(A)+h)[:,1],label = i//(n_iter//plot))
-        #grad=grad*m/grad_norm
-        #problem ici
-        h -= grad_h*alpha
-        lamb -= grad_lamb*alpha
-        phi -= grad_phi*alpha
-        
-        A[0,0] = np.cos(phi)
-        A[0,1] = -np.sin(phi)
-        A[1,0] = np.sin(phi)
-        A[1,1] = np.cos(phi)
-        A *= lamb
-        
-    return X.dot(A)+h
+    return X_match
