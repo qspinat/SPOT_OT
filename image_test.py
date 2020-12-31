@@ -14,7 +14,7 @@ from PIL import Image
 
 #%%################# test FIST image matching ########################
 
-X = np.array(Image.open('Images/landscape2.jpeg'),dtype=float)[:,:,:3]
+X = np.array(Image.open('Images/landscape4.jpeg'),dtype=float)[:,:,:3]
 #X2 = np.array(Image.open('Images/starry_night.png'),dtype=float)[:,:,:3]
 Y_ = Image.open('Images/landscape1.jpeg')
 
@@ -30,7 +30,7 @@ axes[1,-1].imshow(np.array(Y_,dtype=np.int))
 axes[1,-1].set_title('Target Image')
 axes[1,-1].axis("off")
 
-n_iter = 400
+n_iter = 300
 c = 1
 
 for i,scale in enumerate(scale_list):    

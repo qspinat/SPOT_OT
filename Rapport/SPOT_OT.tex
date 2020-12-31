@@ -48,12 +48,12 @@
 % Title
 \rule[5pt]{\linewidth}{.7pt}
 
-{\huge \bfseries \textsc{SPOT: Sliced Partial Optimal Transport  \\-\\ fast python implementation, algorithm improvements, and problems\\[0.4cm] }}
+{\huge \bfseries \textsc{SPOT: Sliced Partial Optimal Transport  \\-\\ fast python implementation, Color transfer, and point cloud registration\\[0.4cm] }}
 
 \rule[5pt]{\linewidth}{.7pt}
 
 % Author 
-\emph{Auteurs:}\\
+\emph{Auteur:}\\
 Quentin \textsc{Spinat}
 
 
@@ -350,11 +350,9 @@ It is important to note that the algorithm use the fact that $X$ and $Y$ are sor
 
 \begin{figure}[H]
 \includegraphics[width = \columnwidth]{before_decomp.pdf}
-\end{figure}
 \begin{center}
 $\downarrow$
 \end{center}
-\begin{figure}[H]
 \includegraphics[width = \columnwidth]{decomp_fig.pdf}
 \caption{Assignment problem decomposition}\label{decomp_fig}
 \end{figure}
@@ -363,8 +361,6 @@ $\downarrow$
 \includegraphics[width = \columnwidth]{decomp_time.pdf}
 \caption{Mean time over $100$ simulations for the decomposition of the assignment problem with respect to $n$, for different values of $\alpha$, logscale}\label{decomp_time}
 \end{figure}
-
-METTRE IMAGE TAILLE DECOMPOSITION
 
 
 \section{Sliced Partial Transport}
@@ -404,7 +400,49 @@ At the end of the algorithm, we get $X^*$ an approximation of the optimal partia
 
 \subsection{Color Transfer}
 
+Once all the previous method has been implemented, color transfer is easy to do : The algorithm is just a gradient descent described as above, with sliced partial optimal transport, and a learning step $\eta$ constant equal to 1. The use of sliced partial optimal transport makes it possible to transfer color from images of different sizes. But the interesting point about that, is that it makes it possible to do a good color transfer between images that have not their content not in the same proportion. 
+
+For example in Fig. \ref{42_fig} and \ref{41_fig}, the input image has a lot more trees than the target image. As a consequence, if no upscaling of the target image is done, trees takes the blue color of the sky.
+
+\begin{figure}[H]
+\includegraphics[trim=0cm 3cm 0cm 1.5cm, width = \columnwidth]{landscape42.pdf}
+\caption{Color transfer between images using sliced partial optimal transport, input image has more trees}\label{42_fig}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[trim=0cm 3cm 0cm 1.5cm, width = \columnwidth]{landscape41.pdf}
+\caption{Color transfer between images using sliced partial optimal transport, input image has more trees and is bluer}\label{41_fig}
+\end{figure}
+
+In the same way, in Fig. \ref{21_fig}, the target image has too much blue, and if no upscaling is done, almost the entire output image is blue.
+
+\begin{figure}[H]
+\includegraphics[trim=0cm 3cm 0cm 1.5cm, width = \columnwidth]{landscape21.pdf}
+\caption{Color transfer between images using sliced partial optimal transport, input image is bluer}\label{21_fig}
+\end{figure}
+
+However, doing too much upscaling can result in a bad output image. This can be seen in the Fig. \ref{12_fig}, where a scale foactor of 1.1 or 1.2 seems better than 1.5, where the trees have taken the color of the mountains of the target image.
+
+\begin{figure}[H]
+\includegraphics[trim=0cm 3cm 0cm 1.5cm, width = \columnwidth]{landscape12.pdf}
+\caption{Color transfer between images using sliced partial optimal transport, input and target images have the same content}\label{12_fig}
+\end{figure}
+
+Every simulations were done with images of size $500 \times 281$ pixels, and with 300 iterations. It took between 1 and 5 minutes (depending on the scale factor) to run.
+
 \subsection{Point Cloud Registration}
+
+Point Cloud registration required a different method which is variation of the Iterative Closest Point Algorithm : the FIST. As stated in the introduction, this algorithm consists in doing a sliced optimal transport in one-dimension, then finding the best similarity transformation to match the transformation described by the partial assignment, and finally update the point cloud with this transformation. To find the best similarity transformation, we solve the Orthogonal Procrustes problem \cite{schonemann1966generalized}, to find the best rotation between the centered point cloud and its centered assignment, we scale it and recenter it, so it has the same scale and center as its assignment in the target point cloud.
+
+Even though Bonneel et al. had impressive results in their paper, I was not able to reproduce it for simple point clouds. The scale and center are good, but the algorithm does not seem to find the appropriate rotation, no matter the number of iterations.
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale = 0.45]{line_shape.png}
+\includegraphics[scale = 0.45]{circle_cross_shape.png}
+\includegraphics[scale = 0.45]{circle_shape.png}
+\caption{Point cloud Registration for different shapes}\label{shape}
+\end{figure}
 
 \section{Appendix}
 
@@ -430,6 +468,15 @@ Let $P(m)$ be the property : algorithm \ref{a_quad} gives the optimal assignment
 
 \addsec{Conclusion}
 %\section*{Conclusion}
+
+To Summarize, with this project I have :
+\begin{itemize}
+\item Made a fast python implementation of Sliced Partial Optimal Transport. This method is fast and efficient in time and memory. I have implemented the problem decomposition but I am not able to parallelize it easily because of a bug in the numba library. To overcome this problem, one should either implement it in C\texttt{++}, debug numba, or use cython instead of numba.
+\item Implemented a color transfer method that works with images that have content with different proportions. It works well and it is fast. However it is not always better to upscale the target image, as it can lead to a faded image.
+\item Implemented the FIST algorithm for point cloud registration. However, it does not seem to work. I have not found out why yet. A way of improvement could be to change the method to find the best rotation. For example, a simple stochastic gradient descent could work.
+\end{itemize}
+
+
 
 
 \bibliographystyle{unsrt}

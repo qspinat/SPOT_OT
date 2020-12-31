@@ -72,7 +72,7 @@ plt.loglog(size,time_t,label="alpha ="+str(alpha))
 plt.xlabel("n")
 plt.ylabel("time (s)")
 plt.grid(True, which="both")
-plt.title("Time for Nearest Neighbor Assigment")
+#plt.title("Time for Nearest Neighbor Assigment")
 plt.legend()
 plt.show()
 

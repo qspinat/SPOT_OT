@@ -50,7 +50,7 @@ def brut_force(X,Y):
 
 
 @jit(nopython=True)
-def assignment_opt(X,Y):
+def nn_assignment(X,Y):
     """
     Parameters
     ----------
@@ -89,7 +89,7 @@ def assignment_opt(X,Y):
     return t
 
 @jit(nopython=True)
-def quad_part_opt_ass_preprocessed_jit(X,Y,t):
+def quad_assignment_preprocessed_jit(X,Y,t):
     """
     Parameters
     ----------
@@ -194,13 +194,13 @@ def quad_part_opt_ass_preprocessed_jit(X,Y,t):
 
     return a
 
-def quad_part_opt_ass_preprocessed(X,Y):
-    t = assignment_opt(X, Y)
-    a = quad_part_opt_ass_preprocessed_jit(X,Y,t)
+def quad_assignment_preprocessed(X,Y):
+    t = nn_assignment(X, Y)
+    a = quad_assignment_preprocessed_jit(X,Y,t)
     return a
 
 @jit(nopython=True)
-def quad_part_opt_ass_jit(X,Y,t):
+def quad_assignment_jit(X,Y,t):
     """
 
     Parameters
@@ -285,13 +285,13 @@ def quad_part_opt_ass_jit(X,Y,t):
     #print("OKOK",ind_min_Y,ind_max_Y-n)
     
     # assigment    
-    a[ind_min:m+ind_max+1] = quad_part_opt_ass_preprocessed_jit(X[ind_min:m+ind_max+1], Y[ind_min_Y:ind_max_Y+1], t-ind_min_Y+ind_min)+ind_min_Y
+    a[ind_min:m+ind_max+1] = quad_assignment_preprocessed_jit(X[ind_min:m+ind_max+1], Y[ind_min_Y:ind_max_Y+1], t-ind_min_Y+ind_min)+ind_min_Y
     
     return a
 
-def quad_part_opt_ass(X,Y):
-    t = assignment_opt(X, Y)
-    a = quad_part_opt_ass_jit(X,Y,t)
+def quad_assignment(X,Y):
+    t = nn_assignment(X, Y)
+    a = quad_assignment_jit(X,Y,t)
     return a
 
 #%%#################### Assigment Decomposition ####################
@@ -406,7 +406,7 @@ def assignment_decomp_jit(X,Y,t,log=False):
     return A
 
 def assignment_decomp(X, Y,log=False):
-    t = assignment_opt(X, Y)
+    t = nn_assignment(X, Y)
     return assignment_decomp_jit(X, Y, t,log=log)
 
 #%%################### optimalinjective assigment with assignment decomposition #####################################
@@ -431,12 +431,12 @@ def assignment_jit(X,Y,t,A):
     a = np.zeros(X.shape[0]).astype(np.int64) 
     
     for i in prange(A.shape[0]):
-        a[A[i][0]:A[i][1]+1] = quad_part_opt_ass_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
+        a[A[i][0]:A[i][1]+1] = quad_assignment_jit( X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
        
     return a
 
 def f_pool(i,X,Y,t,A):
-    return quad_part_opt_ass_jit(X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
+    return quad_assignment_jit(X[A[i][0]:A[i][1]+1] , Y[A[i][2]+1:A[i][3]+1], t[A[i][0]:A[i][1]+1]-A[i][2]-1) + A[i][2]+1
 
 
 def assignment_pool(X,Y,t,A):
@@ -468,14 +468,14 @@ def assignment_pool(X,Y,t,A):
 
 @jit(nopython=True)
 def assignment(X,Y):
-    t = assignment_opt(X, Y)
+    t = nn_assignment(X, Y)
     A = assignment_decomp_jit(X,Y,t)
     a = assignment_jit(X,Y,t,A)
 
     return a
 
 def assignment_bis(X,Y):
-    t = assignment_opt(X, Y)
+    t = nn_assignment(X, Y)
     A = assignment_decomp_jit(X,Y,t)
     a = assignment_pool(X,Y,t,A)
 
@@ -509,8 +509,8 @@ def FIST_image(X,Y,n_iter,c=None):
         Y_sort_indices = np.argsort(Y_proj,kind='mergesort')
         
         #assigment
-        t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
-        a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
+        t = nn_assignment(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
+        a = quad_assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
         #A = assignment_decomp_jit(X_proj[X_sort_indices],Y_proj[Y_sort_indices],t)
         #a = assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t, A)
         
@@ -533,19 +533,13 @@ def FIST_image(X,Y,n_iter,c=None):
 def FIST_2D_similarity(X,Y,n_iter, plot=None):
 
     X_match = X.copy()
-    R = np.zeros((2,2))
 
     for i in range(n_iter):
         if ((i%(n_iter//10))==0):
             print((i*100)//n_iter,'%')
         
         # direction
-        theta = 2*np.pi*np.random.uniform(0,1)
-        R[0,0] = np.cos(theta)
-        R[0,1] = -np.sin(theta)
-        R[1,0] = np.sin(theta)
-        R[1,1] = np.cos(theta)
-       
+        theta = np.pi*np.random.uniform(0,1)       
         
         #projection
         X_proj = X_match[:,0]*np.cos(theta)+X_match[:,1]*np.sin(theta)
@@ -556,8 +550,8 @@ def FIST_2D_similarity(X,Y,n_iter, plot=None):
         Y_sort_indices = np.argsort(Y_proj,kind='mergesort')
         
         #assigment
-        t = assignment_opt(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
-        a = quad_part_opt_ass_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
+        t = nn_assignment(X_proj[X_sort_indices], Y_proj[Y_sort_indices])  
+        a = quad_assignment_jit(X_proj[X_sort_indices], Y_proj[Y_sort_indices], t)
         
         cx = np.mean(X_match,axis=0)
         cy = np.mean(Y[Y_sort_indices][a],axis=0)
@@ -566,10 +560,10 @@ def FIST_2D_similarity(X,Y,n_iter, plot=None):
         
         # update step     
         #rotation A
-        M = (X_match-cx).T.dot(Y[Y_sort_indices][a]-cy)
+        M = (Y[Y_sort_indices][a]-cy).T.dot(X_match-cx)
         u,s,vh = np.linalg.svd(M)
         O = u.dot(vh)
-        d = np.sign(np.linalg.det(O))
+        d = np.linalg.det(O)
         S = np.eye(vh.shape[0])
         S[-1,-1] = d
         A = u.dot(S).dot(vh)
@@ -577,15 +571,16 @@ def FIST_2D_similarity(X,Y,n_iter, plot=None):
         #scale
         stdx = np.std(np.linalg.norm(X_match-cx,axis=1))
         stdy = np.std(np.linalg.norm(Y[Y_sort_indices][a]-cy,axis=1))
+        #print(stdx,stdy)
         scale = stdy/stdx
         
         #update
-        X_match = scale*A.dot((X_match-cx).T).T+cy
+        X_match = scale*(X_match-cx).dot(A.T)+cy
 
         
         if ((i%(n_iter//10))==0):
             print("objective norm :", np.linalg.norm(X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]))
-        if plot !=None and ((i%(n_iter//plot))==0):
-            plt.scatter(X_match[:,0],X_match[:,1], label = i ,alpha=0.2/plot*(i/(n_iter/plot)+1),color="green")
+        if plot !=None and i!=0 and ((i%(n_iter//plot))==0):
+            plt.scatter(X_match[:,0],X_match[:,1], label = "iteration "+str(i))
         
     return X_match
