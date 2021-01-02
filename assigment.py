@@ -560,7 +560,7 @@ def FIST_2D_similarity(X,Y,n_iter, plot=None):
         
         # update step     
         #rotation A
-        M = (Y[Y_sort_indices][a]-cy).T.dot(X_match-cx)
+        M = (Y[Y_sort_indices][a]-cy).T.dot(X_match[X_sort_indices]-cx)
         u,s,vh = np.linalg.svd(M)
         O = u.dot(vh)
         d = np.linalg.det(O)
@@ -579,7 +579,7 @@ def FIST_2D_similarity(X,Y,n_iter, plot=None):
 
         
         if ((i%(n_iter//10))==0):
-            print("objective norm :", np.linalg.norm(X_proj[X_sort_indices]-Y_proj[Y_sort_indices][a]))
+            print("objective norm :", np.linalg.norm(X_match[X_sort_indices]-Y[Y_sort_indices][a]))
         if plot !=None and i!=0 and ((i%(n_iter//plot))==0):
             plt.scatter(X_match[:,0],X_match[:,1], label = "iteration "+str(i))
         
