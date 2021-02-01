@@ -6,12 +6,10 @@ Created on Thu Dec 17 12:34:45 2020
 @author: qspinat
 """
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 
-from assigment import *
+from assignment import *
 from plot_assignment import *
-from PIL import Image
 
 #%%################################################################
       

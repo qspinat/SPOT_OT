@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import time
 from numba import jit
 
-from assigment import *
+from assignment import *
 
 #%%
 

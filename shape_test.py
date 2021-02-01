@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from assigment import *
+from assignment import *
 
 #%%################ test complexe #################
 
@@ -41,12 +41,12 @@ np.random.shuffle(X)
 
 plt.figure()
 
-n_iter = 1000
+n_iter = 50
 X_match = FIST_2D_similarity(X,Y,n_iter,plot=2)
 
 plt.scatter(Y[:,0],Y[:,1],label = "Y data")
 plt.scatter(X[:,0],X[:,1],label = "X data")
-plt.scatter(X_match[:,0],X_match[:,1], label = "matched X")
+plt.scatter(X_match[:,0],X_match[:,1], label = "iteration "+str(n_iter))
 plt.legend()
 
 
@@ -55,7 +55,7 @@ plt.legend()
 #data generation 
 
 n = 10000
-m = 8000
+m = 100
 
 Y1 = np.random.uniform(-1,1,size=(n//3,1))
 Y1 = np.concatenate((Y1,np.zeros((n//3,1))),axis=1)
@@ -74,12 +74,12 @@ np.random.shuffle(X)
 
 plt.figure()
 
-n_iter = 1000
+n_iter = 20
 X_match = FIST_2D_similarity(X,Y,n_iter,plot=2)
 
 plt.scatter(Y[:,0],Y[:,1],label = "Y data")
 plt.scatter(X[:,0],X[:,1],label = "X data")
-plt.scatter(X_match[:,0],X_match[:,1], label = "matched X")
+plt.scatter(X_match[:,0],X_match[:,1], label = "iteration "+str(n_iter))
 plt.legend()
 
 #%%################ test line #################
@@ -98,10 +98,10 @@ plt.figure()
 X = Y[:m].copy().dot(np.array([[np.cos(np.pi/3),np.sin(np.pi/3)],[-np.sin(np.pi/3),np.cos(np.pi/3)]]))*0.3-[2,-0.5]
 np.random.shuffle(X)
 
-n_iter = 1000
+n_iter = 20
 X_match = FIST_2D_similarity(X,Y,n_iter,plot=2)
 
 plt.scatter(Y[:,0],Y[:,1],label = "Y data")
 plt.scatter(X[:,0],X[:,1],label = "X data")
-plt.scatter(X_match[:,0],X_match[:,1], label = "matched X")
+plt.scatter(X_match[:,0],X_match[:,1], label = "iteration "+str(n_iter))
 plt.legend()
